@@ -12,7 +12,7 @@ The guest accounts that you are using have been configured to contain the requir
 
 Once you have changed to your work directory, now _cd_ into the _training-intro/practical/one_ directory that should be visible. In this you will see the _code.py_ file which we are going to work with in this exercise. This is a simple, contrived, Python example but is useful to illustrate the central concepts behind MLIR and xDSL. Our objective is to write a Python compiler which enables programmers to decorate functions and for these to then be compiled and executed natively. 
 
-Let's take a look inside the _code.py_ file to see how this is driven.
+Let's take a look inside the _ex_one.py_ file to see how this is driven.
 
 ```python
 from python_compiler import python_compile   
@@ -26,7 +26,7 @@ hello_world()
 
 You can see that we have started with a function, called _hello_world_, which prints a message to standard out. The code imports the _python_compiler_ Python script which defines the _python_compile_ decorator, and this is used to decorate the functions that we wish to compile. The _python_compiler_ script can be found in the _training-intro/src_ directory, this parses the Python code and we will look at this a bit later on.
 
-Now let's run this by issuing `python3.10 code.py`, you should see a result similar to:
+Now let's run this by issuing `python3.10 ex_one.py`, you should see a result similar to:
 
 ```
 builtin.module(){
