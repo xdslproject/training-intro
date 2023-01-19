@@ -97,3 +97,7 @@ In this we are calling the _mlir-opt_ tool to undertake some conversion in the s
 ### Running
 
 Now it's time to run our executable on a compute nodes of ARCHER2, we have prepared a submission script called _sub_ex1.srun_ so you need to execute `sbatch sub_ex1.srun` at the command line. The executable will run and the output will be stored in an output file that you can view via _cat_.
+
+## Well done!
+
+Well done - you have got your first end to end code compiling and running on a supercomputer via xDSL and MLIR. In the next part of this practical we are going to enhance the dialects and transformations to extend the subset of Python that our tool supports
