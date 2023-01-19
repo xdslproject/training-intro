@@ -60,3 +60,40 @@ To this end we use the _tinypy_opt_ tool, which enables us to drive the parsing,
 There are a few things going on here, so let's unpack it step by step. Firstly, we are providing the IR stored in the _eg_one.xdsl_ file as an input to the _tinypy-opt_ tool. This is simply the IR that was generated in the previous section and then, using the _-p_ flag we are instructing the that the _tiny-py-to-standard_ pass should be run over that IR to transform it. Lastly, the _-t_ flag instructs the tool which target to output the IR for, in this case we are selecting MLIR format so that it can be fed directly into the MLIR tooling itself.
 
 You can see that this IR looks quite different to the IR previously where it is in a much flatter form and using SSA. It's also closer to the concrete implementation level, for instance the argument _"Hello World!"_ is now declared as a global and the memory reference of this is passed as the argument to the _print_ function. Whilst this is still human readable and debuggable, effectively we have removed a lot of the Python-ness that is present in the _tiny_py_ dialect in this pass.
+
+## Handling built in function calls
+
+There is just one more activity that needs to happen before we can build the code and that is to handle the the _print_ function. Specifically, _print_ is an inbuilt Python function whereas we are calling _printf_ from the standard library. Furthermore, we need to tell the compiler that this function is external.
+
+We have developed another transformation pass, _apply-builtin_, which will manipulate the IR to target the built in functions. Specifically, this transformation is looking for nodes in the IR of type _tiny_py.call_expr_ and is then checking the _builtin_ flag. If this is true it will change the name of the function to _printf_, add a newline at the end of the string, and also prefix an operation at the top level of the module to direct that this is an external function. Run `./tinypy-opt eg_one.xdsl -p apply-builtin,tiny-py-to-standard -t mlir_` which gives the following:
+
+```
+"builtin.module"() ({
+"llvm.mlir.global"() ({
+  }) {addr_space = 0 : i32, constant, global_type = !llvm.array<14 x i8>, linkage = #llvm.linkage<internal>, sym_name = "str0", unnamed_addr = 0 : i64, value = "Hello world!\0A\00"} : () -> ()
+"llvm.func"() ({
+  }) {CConv = #llvm.cconv<ccc>, function_type = !llvm.func<i32 (ptr<i8>, ...)>, linkage = #llvm.linkage<external>, sym_name = "printf"} : () -> ()
+  "func.func"() ({    
+    %0 = "llvm.mlir.addressof"() {global_name = @str0} : () -> !llvm.ptr<array<14 x i8>>
+    %1 = "llvm.getelementptr"(%0) {rawConstantIndices = array<i32: 0, 0>} : (!llvm.ptr<array<14 x i8>>) -> !llvm.ptr<i8>
+    "llvm.call"(%1) {"callee" = @printf} : (!llvm.ptr<i8>) -> (i32)
+    "func.return"() : () -> ()
+  }) {"sym_name" = "hello_world", "function_type" = () -> (), "sym_visibility" = "public"} : () -> ()
+}) : () -> ()
+```
+
+Compared to the previous IR, you can see that we have the addition of the _llvm.func_ operation at the top level of the module, the _Hello world!_ string has been extended with a new line and it is calling into _printf_ rather than _print_ now.
+
+## Generating the executable and running
+
+The IR is ready to be fed into the LLVM tool and compiled, to do this we execute:
+
+```bash
+user@login01:~$ mlir-opt --convert-func-to-llvm ex_one.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
+```
+
+In this we are calling the _mlir-opt_ tool to undertake some conversion in the standard dialects to the LLVM dialect, which is then fed into the _mlir-translate_ tool to generate LLVM-IR. This IR is then used as an input to Clang which builds the executable called _test_. If you are interested you can run the commands in isolation to see the different IRs.
+
+### Running
+
+Now it's time to run our executable on a compute nodes of ARCHER2, we have prepared a submission script called _sub_ex1.srun_ so you need to execute `sbatch sub_ex1.srun` at the command line. The executable will run and the output will be stored in an output file that you can view via _cat_.
