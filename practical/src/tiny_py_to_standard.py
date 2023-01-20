@@ -34,27 +34,27 @@ class SSAValueCtx:
             self.dictionary[identifier] = ssa_value
 
 def tiny_py_to_standard(ctx: MLContext, input_module: ModuleOp):
-    res_module = translate_program(input_module)    
+    res_module = translate_program(input_module)
     res_module.regions[0].move_blocks(input_module.regions[0])
     # Create program entry point
     #check_program_entry_point(input_module)
 
 def translate_program(input_module: Module) -> ModuleOp:
     # create an empty global context
-    global_ctx = SSAValueCtx()    
+    global_ctx = SSAValueCtx()
     body = Region()
     block = Block()
-    for top_level_entry in input_module.ops:      
-      for module in top_level_entry.children.blocks[0].ops:        
+    for top_level_entry in input_module.ops:
+      for module in top_level_entry.children.blocks[0].ops:
         translate_toplevel(global_ctx, module, block)
 
     body.add_block(block)
     return ModuleOp.from_region_or_ops(body)
 
-def translate_toplevel(ctx: SSAValueCtx, op: Operation, block) -> Operation:    
-  if isinstance(op, tiny_py.Function):        
+def translate_toplevel(ctx: SSAValueCtx, op: Operation, block) -> Operation:
+  if isinstance(op, tiny_py.Function):
     block.add_op(translate_fun_def(ctx, op))
-  
+
 def translate_fun_def(ctx: SSAValueCtx,
                       fn_def: tinypy.Function) -> Operation:
     routine_name = fn_def.attributes["fn_name"]
@@ -68,7 +68,7 @@ def translate_fun_def(ctx: SSAValueCtx,
                     parent_scope=ctx)
 
     arg_types=[]
-    arg_names=[]  
+    arg_names=[]
 
     body_contents=[]
     for op in fn_def.body.blocks[0].ops:
@@ -81,16 +81,16 @@ def translate_fun_def(ctx: SSAValueCtx,
     # A return is always needed at the end of the procedure
     block.add_op(func.Return.create())
 
-    body.add_block(block)    
+    body.add_block(block)
 
-    function_ir=func.FuncOp.from_region(routine_name, arg_types, [], body)      
+    function_ir=func.FuncOp.from_region(routine_name, arg_types, [], body)
     function_ir.attributes["sym_visibility"]=StringAttr("public")
 
     #if len(arg_names) > 0:
     #  arg_attrs={}
     #  for arg_name in arg_names:
     #    arg_attrs[StringAttr("fir.bindc_name")]=StringAttr(arg_name)
-    #  function_fir.attributes["arg_attrs"]=DictionaryAttr.from_dict(arg_attrs)    
+    #  function_fir.attributes["arg_attrs"]=DictionaryAttr.from_dict(arg_attrs)
     return function_ir
 
 def translate_def_or_stmt(ctx: SSAValueCtx, op: Operation) -> List[Operation]:
@@ -121,9 +121,9 @@ def try_translate_stmt(ctx: SSAValueCtx,
     Returns None otherwise.
     """
     if isinstance(op, tiny_py.CallExpr):
-      return translate_call_expr_stmt(ctx, op)    
+      return translate_call_expr_stmt(ctx, op)
     if isinstance(op, tiny_py.Return):
-      return translate_return(ctx, op)    
+      return translate_return(ctx, op)
 
 def translate_stmt(ctx: SSAValueCtx, op: Operation) -> List[Operation]:
     """
@@ -144,7 +144,7 @@ def translate_call_expr_stmt(ctx: SSAValueCtx,
                              call_expr: psy_ir.CallExpr, is_expr=False) -> List[Operation]:
     ops: List[Operation] = []
     args: List[SSAValue] = []
-    
+
     for arg in call_expr.args.blocks[0].ops:
         op, arg = translate_expr(ctx, arg)
         if op is not None: ops += op
@@ -156,8 +156,8 @@ def translate_call_expr_stmt(ctx: SSAValueCtx,
         #else:
         #  args.append(arg)
         args.append(arg)
-    
-    name = call_expr.attributes["func"]    
+
+    name = call_expr.attributes["func"]
     # Need return type here for expression
     if is_expr:
       result_type=try_translate_type(call_expr.type)
@@ -193,7 +193,6 @@ def try_translate_expr(
     """
     if isinstance(op, tiny_py.Constant):
       op = translate_constant(op)
-      #print(op.results)
       return op
 
     assert False, "Unknown Expression"

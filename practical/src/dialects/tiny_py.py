@@ -39,7 +39,7 @@ class EmptyAttr(ParametrizedAttribute):
 @irdl_op_definition
 class Module(Operation):
     name = "tiny_py.module"
-    
+
     children = SingleBlockRegionDef()
 
     @staticmethod
@@ -57,16 +57,16 @@ class Module(Operation):
 class Function(Operation):
     name = "tiny_py.function"
 
-    fn_name = AttributeDef(StringAttr)    
+    fn_name = AttributeDef(StringAttr)
     args = AttributeDef(ArrayAttr)
-    return_var = AttributeDef(AnyAttr())    
-    body = SingleBlockRegionDef()    
+    return_var = AttributeDef(AnyAttr())
+    body = SingleBlockRegionDef()
 
     @staticmethod
     def get(fn_name: Union[str, StringAttr],
-            return_var,            
-            args: List[Operation],            
-            body: List[Operation],            
+            return_var,
+            args: List[Operation],
+            body: List[Operation],
             verify_op: bool = True) -> Routine:
         if return_var is None:
           return_var=EmptyToken()
@@ -78,7 +78,7 @@ class Function(Operation):
         return res
 
     def verify_(self) -> None:
-      pass 
+      pass
 
 
 @irdl_attr_definition
@@ -129,7 +129,7 @@ class CallExpr(Operation):
     args = SingleBlockRegionDef()
 
     @staticmethod
-    def get(func: str,            
+    def get(func: str,
             args: List[Operation],
             type=EmptyAttr(),
             builtin=False,
@@ -147,11 +147,11 @@ class CallExpr(Operation):
 class tinyPyIR:
     ctx: MLContext
 
-    def __post_init__(self):                
+    def __post_init__(self):
         self.ctx.register_attr(BoolAttr)
         self.ctx.register_attr(Token)
-        self.ctx.register_attr(EmptyToken)        
-        self.ctx.register_attr(EmptyAttr)      
+        self.ctx.register_attr(EmptyToken)
+        self.ctx.register_attr(EmptyAttr)
 
         self.ctx.register_op(Module)
         self.ctx.register_op(Function)
@@ -165,7 +165,7 @@ class tinyPyIR:
 
     @staticmethod
     def get_statement_op_types() -> List[Type[Operation]]:
-        statements: List[Type[Operation]] = []            
+        statements: List[Type[Operation]] = []
         return statements + psyIR.get_expression_op_types()
 
     @staticmethod

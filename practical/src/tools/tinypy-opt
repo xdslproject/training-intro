@@ -18,7 +18,7 @@ from xdsl.xdsl_opt_main import xDSLOptMain
 
 class PsyOptMain(xDSLOptMain):
 
-    passes_native = [       
+    passes_native = [
       tiny_py_to_standard
     ]
 
@@ -29,15 +29,15 @@ class PsyOptMain(xDSLOptMain):
         print_fortran(prog.ops, stream=output)
 
     def register_all_targets(self):
-        super().register_all_targets()        
+        super().register_all_targets()
 
-    def setup_pipeline(self):        
-      super().setup_pipeline()        
+    def setup_pipeline(self):
+      super().setup_pipeline()
 
     def register_all_dialects(self):
         super().register_all_dialects()
-        """Register all dialects that can be used."""        
-        tinypy_ir = tinyPyIR(self.ctx)                
+        """Register all dialects that can be used."""
+        tinypy_ir = tinyPyIR(self.ctx)
 
     @staticmethod
     def get_passes_as_dict(
@@ -58,16 +58,16 @@ class PsyOptMain(xDSLOptMain):
         """Add all passes that can be called by psy-opt in a dictionary."""
 
         pass_list = []
-        
+
         passes = PsyOptMain.passes_native
-        
+
         for pass_function in passes:
             pass_list.append(pass_function.__name__.replace("_", "-"))
 
         return pass_list
 
     def register_all_frontends(self):
-        super().register_all_frontends()        
+        super().register_all_frontends()
 
 def __main__():
     psy_main = PsyOptMain()
