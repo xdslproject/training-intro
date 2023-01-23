@@ -8,6 +8,7 @@ from xdsl.ir import MLContext
 from xdsl.dialects.builtin import ModuleOp
 
 from tiny_py_to_standard import tiny_py_to_standard
+from apply_builtin import apply_builtin
 
 from tiny_py import tinyPyIR
 from util.semantic_error import SemanticError
@@ -19,7 +20,8 @@ from xdsl.xdsl_opt_main import xDSLOptMain
 class PsyOptMain(xDSLOptMain):
 
     passes_native = [
-      tiny_py_to_standard
+      tiny_py_to_standard,
+      apply_builtin
     ]
 
     def register_all_passes(self):
