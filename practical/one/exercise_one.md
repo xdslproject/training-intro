@@ -2,6 +2,9 @@
 
 In this practical we are going to look at compiling a simple Python function to run on the compute node of ARCHER2, a Cray EX. This will give you an introduction to MLIR and xDSL, as well as getting you onto the ARCHER2 supercomputer where we will be doing our practicals today.
 
+>**Having problems?**  
+> As you go through this exercise if there is anything you are unsure about or are stuck on then please do not hesitate to ask one of the tutorial demonstrators and we will be happy to assist!
+
 ## Getting started
 
 Firstly, you should connect to ARCHER2 via the login credentials supplied to you by the instructors. You will need to connect to the machine via ssh, for instance `ssh username@login.archer2.ac.uk`. Once you have connected you should then change into your _work_ directory, via issuing `cd /work/y14/y14/$USER`, as this is the filesystem that is visible to the compute nodes.

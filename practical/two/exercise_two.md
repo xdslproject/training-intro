@@ -2,7 +2,10 @@
 
 In this practical we are going to _get into the guts_ of what is going on in our _tiny_py_ dialect and transformations by developing an enhancement to these in order to support a wider range of Python in our compiler. Specifically, we are going to add support for the loop construct which will provide an insight into how these things are coded.
 
-Sample solutions to this exercise are provided in _sample_solutions_ in-case you get stuck or want to compare your efforts with ours.
+Sample solutions to this exercise are provided in [sample_solutions](sample_solutions) in-case you get stuck or just want to compare your efforts with ours.
+
+>**Having problems?**  
+> As you go through this exercise if there is anything you are unsure about or are stuck on then please do not hesitate to ask one of the tutorial demonstrators and we will be happy to assist!
 
 ## The starting point
 
