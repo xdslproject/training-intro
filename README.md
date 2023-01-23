@@ -4,7 +4,7 @@ This repository contains the materials for the practical introduction to MLIR fo
 
 This top level directory contains:
 * [lectures](lectures) which holds the PDF lecture material for the course, providing an overview to MLIR, LLVM, and xDSL
-* [practicals](practicals) where we get hands on with the concepts to develop a Python compiler and run the resulting executables on a Cray supercomputer.
+* [practical](practical) where we get hands on with the concepts to develop a Python compiler and run the resulting executables on a Cray supercomputer.
 
 ## Working on your own?
 
