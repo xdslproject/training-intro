@@ -99,6 +99,5 @@ builtin.module() {
 
 You should be able to see that, by operating on our high level _tiny_py_ dialect then it is obvious how to identify loops and for these to be transformed. If, by contrast, we were operating on the standard dialects (e.g. the _scf.while_ operation that our loop transforms into) then it would potentially be more complex to identify. This sort of tranformation can get quite complex, where we are identifying potential parallelism and then manipulating the IR as appropriate.
 
-## Lowering to the standard MLIR dialect
 
 
