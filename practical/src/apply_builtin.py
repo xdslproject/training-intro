@@ -29,7 +29,7 @@ class ApplyBuiltinRewriter(RewritePattern):
                         if op.value.data[-1] != "\\n":
                             op.attributes["value"]=StringAttr(op.value.data+"\\n")
 
-def apply_builtin(ctx: tiny_py.MLContext, module: ModuleOp) -> ModuleOp:
+def apply_builtin(ctx: tiny_py.Module, module: ModuleOp) -> ModuleOp:
     """
     This is the entry point of the pass, where we create the rewriter and then walk the IR
     to select specific operations of interest and manipulate them
