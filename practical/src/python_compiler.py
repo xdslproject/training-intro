@@ -27,8 +27,9 @@ def python_compile(func):
         tiny_py_ir=ModuleOp.from_region_or_ops([tiny_py_ir])
 
         # Now we use the xDSL printer to output our built IR to stdio
-        printer = Printer(stream=sys.stdout)
+        printer = Printer(stream=sys.stdout, target=Printer.Target.XDSL)
         printer.print_op(tiny_py_ir)
+        print("") # Gives us a new line
     return compile_wrapper
 
 class Analyzer(ast.NodeVisitor):
@@ -73,7 +74,7 @@ class Analyzer(ast.NodeVisitor):
             operation=self.visit(a)
             if operation is not None:
                 # We only need this check because we return None from our mocked out loop
-                # parser function that you will complete in exercise two, 
+                # parser function that you will complete in exercise two,
                 # so we don't want to include that in the operations
                 contents.append(operation)
         return tiny_py.Function.get(node.name, None, [], contents)
@@ -95,8 +96,8 @@ class Analyzer(ast.NodeVisitor):
         Handles a for loop, note that we make life simpler here by assuming that
         it is in the format for i in range(from, to), and that is where we get
         the from and to expressions.
-                
-        This function currently visits all the children in the loop body and 
+
+        This function currently visits all the children in the loop body and
         appends their operations to the contents list. It also obtains the operations
         that represent the from and to expressions.
         """
@@ -105,9 +106,9 @@ class Analyzer(ast.NodeVisitor):
             contents.append(self.visit(a))
         expr_from=self.visit(node.iter.args[0])
         expr_to=self.visit(node.iter.args[1])
-        
+
         # Now you need to construct the tiny_py Loop and return it
-        return None       
+        return None
 
     def visit_BinOp(self, node):
         """
