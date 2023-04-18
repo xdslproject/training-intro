@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import List, Optional, Type, Union
+from typing import List
 
-from xdsl.dialects.builtin import IntegerAttr, StringAttr, ArrayAttr, ArrayOfConstraint, AnyAttr, IntAttr, FloatAttr
-from xdsl.ir import Data, MLContext, Operation, ParametrizedAttribute
-from xdsl.irdl import (AnyOf, AttributeDef, SingleBlockRegionDef, builder, ParameterDef,
-                       irdl_attr_definition, irdl_op_definition)
+from xdsl.dialects.builtin import IntegerAttr, StringAttr, ArrayAttr, AnyAttr, FloatAttr
+from xdsl.ir import Data, Operation, ParametrizedAttribute, Dialect, TypeAttribute
+from xdsl.irdl import (AnyOf, Region, Block, irdl_attr_definition,
+                        irdl_op_definition, OpAttr, IRDLOperation)
 from xdsl.parser import Parser
 from xdsl.printer import Printer
 
@@ -17,7 +16,7 @@ navigate it and understand what is going on.
 """
 
 @irdl_attr_definition
-class BoolAttr(Data[bool]):
+class BoolType(Data[bool]):
     """
     Represents a boolean, MLIR does not by default have a boolean (it uses integer 1 and 0)
     and-so this can be useful in your own dialects
@@ -26,24 +25,22 @@ class BoolAttr(Data[bool]):
     data: bool
 
     @staticmethod
-    def parse_parameter(parser: Parser) -> BoolAttr:
+    def parse_parameter(parser: Parser) -> BoolType:
         data = parser.parse_str_literal()
         if data == "True": return True
         if data == "False": return False
         raise Exception(f"bool parsing resulted in {data}")
         return None
 
-    @staticmethod
-    def print_parameter(data: bool, printer: Printer) -> None:
-        printer.print_string(f'"{data}"')
+    def print_parameter(self, printer: Printer) -> None:
+        printer.print_string(f'"{self.data}"')
 
     @staticmethod
-    @builder
-    def from_bool(data: bool) -> BoolAttr:
-        return BoolAttr(data)
+    def from_bool(data: bool) -> BoolType:
+        return BoolType(data)
 
 @irdl_attr_definition
-class EmptyAttr(ParametrizedAttribute):
+class EmptyType(ParametrizedAttribute, TypeAttribute):
     """
     This represents an empty value, can be useful where you
     need a placeholder to explicitly denote that something is not filled
@@ -51,13 +48,13 @@ class EmptyAttr(ParametrizedAttribute):
     name="empty"
 
 @irdl_op_definition
-class Module(Operation):
+class Module(IRDLOperation):
     """
     A Python module, this is the top level Python container which is a region
     """
     name = "tiny_py.module"
 
-    children = SingleBlockRegionDef()
+    children: Region
 
     @staticmethod
     def get(contents: List[Operation],
@@ -68,7 +65,7 @@ class Module(Operation):
         return res
 
 @irdl_op_definition
-class Function(Operation):
+class Function(IRDLOperation):
     """
     A Python function, our handling here is simplistic and limited but sufficient
     for the exercise (and keeps this simple!) You can see how we have a mixture of
@@ -76,29 +73,33 @@ class Function(Operation):
     """
     name = "tiny_py.function"
 
-    fn_name = AttributeDef(StringAttr)
-    args = AttributeDef(ArrayAttr)
-    return_var = AttributeDef(AnyAttr())
-    body = SingleBlockRegionDef()
+    fn_name: OpAttr[StringAttr]
+    args: OpAttr[ArrayAttr]
+    return_var: OpAttr[AnyAttr()]
+    body: Region
 
     @staticmethod
-    def get(fn_name: Union[str, StringAttr],
-            return_var: Union[Operation, None],
+    def get(fn_name: str | StringAttr,
+            return_var: Operation | None,
             args: List[Operation],
             body: List[Operation],
             verify_op: bool = True) -> Routine:
+        if isinstance(fn_name, str):
+            # If fn_name is a string then wrap it in StringAttr
+            fn_name=StringAttr(fn_name)
+
         if return_var is None:
             # If return is None then use the empty token placeholder
-            return_var=EmptyAttr()
+            return_var=EmptyType()
         res = Function.build(attributes={"fn_name": fn_name, "return_var": return_var,
-                            "args": ArrayAttr.from_list(args)}, regions=[body])
+                            "args": ArrayAttr(args)}, regions=[Region([Block(body)])])
         if verify_op:
             # We don't verify nested operations since they might have already been verified
             res.verify(verify_nested_ops=False)
         return res
 
 @irdl_op_definition
-class Assign(Operation):
+class Assign(IRDLOperation):
     """
     Represents variable assignment, where the LHS is the variable and RHS an expression. Note
     that we are fairly limited here to representing one variable on the LHS only.
@@ -108,33 +109,43 @@ class Assign(Operation):
     """
     name = "tiny_py.assign"
 
-    var_name = AttributeDef(StringAttr)
-    value = SingleBlockRegionDef()
+    var_name: OpAttr[StringAttr]
+    value: Region
 
     @staticmethod
-    def get(var_name: str,
+    def get(var_name: str | StringAttr,
             value: Operation,
             verify_op: bool = True) -> Assign:
-        res = Assign.build(attributes={"var_name":var_name}, regions=[[value]])
+
+        if isinstance(var_name, str):
+            # If var_name is a string then wrap it in StringAttr
+            var_name=StringAttr(var_name)
+
+        res = Assign.build(attributes={"var_name":var_name}, regions=[Region([Block([value])])])
         if verify_op:
             # We don't verify nested operations since they might have already been verified
             res.verify(verify_nested_ops=False)
         return res
 
 @irdl_op_definition
-class Loop(Operation):
+class Loop(IRDLOperation):
     """
     A Python loop, we take a restricted view here that the loop will operate on a variable
     between two bounds (e.g. has been provided with a Python range).
-    
+
     We have started this dialect definition off for you, and you will need to complete it.
     There should be four members - a variable which is a string attribute and three
     regions (the from and to expressions, and loop body)
     """
     name = "tiny_py.loop"
 
+    variable: OpAttr[StringAttr]
+    from_expr: Region
+    to_expr: Region
+    body: Region
+
     @staticmethod
-    def get(variable: str,
+    def get(variable: str | StringAttr,
             from_expr: Operation,
             to_expr: Operation,
             body: List[Operation],
@@ -142,14 +153,19 @@ class Loop(Operation):
         # We need to wrap from_expr and to_expr in lists because they are defined as separate regions
         # and a region is a block with a list of operations. This is not needed for body because it is
         # already a list of operations
-        res = Loop.build(attributes={"variable": variable}, regions=[[from_expr], [to_expr], body])
+        if isinstance(variable, str):
+            # If variable is a string then wrap it in StringAttr
+            variable=StringAttr(variable)
+
+        res = Loop.build(attributes={"variable": variable}, regions=[Region([Block([from_expr])]),
+            Region([Block([to_expr])]), Region([Block(body)])])
         if verify_op:
             # We don't verify nested operations since they might have already been verified
             res.verify(verify_nested_ops=False)
         return res
 
 @irdl_op_definition
-class Var(Operation):
+class Var(IRDLOperation):
     """
     A variable reference in Python, we just use the string name as storage here rather
     than pointing to a token instance of the variable which others would also reference
@@ -157,11 +173,15 @@ class Var(Operation):
     """
     name = "tiny_py.var"
 
-    variable = AttributeDef(StringAttr)
+    variable: OpAttr[StringAttr]
 
     @staticmethod
-    def get(variable,
+    def get(variable : str | StringAttr,
             verify_op: bool = True) -> If:
+        if isinstance(variable, str):
+            # If variable is a string then wrap it in StringAttr
+            variable=StringAttr(variable)
+
         res = Var.build(attributes={"variable": variable})
         if verify_op:
             # We don't verify nested operations since they might have already been verified
@@ -169,39 +189,44 @@ class Var(Operation):
         return res
 
 @irdl_op_definition
-class BinaryOperation(Operation):
+class BinaryOperation(IRDLOperation):
     """
     A Python binary operation, storing the operation type as a string
     and the LHS and RHS expressions as regions
     """
     name = "tiny_py.binaryoperation"
 
-    op = AttributeDef(StringAttr)
-    lhs = SingleBlockRegionDef()
-    rhs = SingleBlockRegionDef()
+    op: OpAttr[StringAttr]
+    lhs: Region
+    rhs: Region
 
     @staticmethod
-    def get(op: str,
+    def get(op: str | StringAttr,
             lhs: Operation,
             rhs: Operation,
             verify_op: bool = True) -> BinaryExpr:
-        res = BinaryOperation.build(attributes={"op": op}, regions=[[lhs], [rhs]])
+        if isinstance(op, str):
+            # If op is a string then wrap it in StringAttr
+            op=StringAttr(op)
+
+        res = BinaryOperation.build(attributes={"op": op}, regions=[Region([Block([lhs])]),
+                Region([Block([rhs])])])
         if verify_op:
             # We don't verify nested operations since they might have already been verified
             res.verify(verify_nested_ops=False)
         return res
 
 @irdl_op_definition
-class Constant(Operation):
+class Constant(IRDLOperation):
     """
     A constant value, we currently support integers, floating points, and strings
     """
     name = "tiny_py.constant"
 
-    value = AttributeDef(AnyOf([StringAttr, IntegerAttr, FloatAttr]))
+    value: OpAttr[AnyOf([StringAttr, IntegerAttr, FloatAttr])]
 
     @staticmethod
-    def get(value: Union[None, bool, int, str, float], width=None,
+    def get(value: None | bool | int | str | float, width=None,
             verify_op: bool = True) -> Literal:
         if width is None: width=32
         if type(value) is int:
@@ -209,7 +234,7 @@ class Constant(Operation):
         elif type(value) is float:
             attr = FloatAttr.from_float_and_width(value, width)
         elif type(value) is str:
-            attr = StringAttr.from_str(value)
+            attr = StringAttr(value)
         else:
             raise Exception(f"Unknown constant of type {type(value)}")
         res = Constant.create(attributes={"value": attr})
@@ -219,7 +244,7 @@ class Constant(Operation):
         return res
 
 @irdl_op_definition
-class Return(Operation):
+class Return(IRDLOperation):
     """
     Return from a function, we just support return without
     any values/expressions at the moment
@@ -227,7 +252,7 @@ class Return(Operation):
     name = "tiny_py.return"
 
 @irdl_op_definition
-class CallExpr(Operation):
+class CallExpr(IRDLOperation):
     """
     Calling a function, in our example calling the print function, we store the target
     function name and whether this is a builtin function as attributes (the second is
@@ -237,43 +262,42 @@ class CallExpr(Operation):
     """
     name = "tiny_py.call_expr"
 
-    func = AttributeDef(StringAttr)
-    builtin = AttributeDef(BoolAttr)
-    type= AttributeDef(AnyOf([AnyAttr(), EmptyAttr]))
-    args = SingleBlockRegionDef()
+    func: OpAttr[StringAttr]
+    builtin: OpAttr[BoolType]
+    type:  OpAttr[AnyOf([AnyAttr(), EmptyType])]
+    args: Region
 
     @staticmethod
-    def get(func: str,
+    def get(func: str | StringAttr,
             args: List[Operation],
-            type=EmptyAttr(),
-            builtin=False,
+            type=EmptyType(),
+            builtin: bool =False,
             verify_op: bool = True) -> CallExpr:
+
+        if isinstance(func, str):
+            # If func is a string then wrap it in StringAttr
+            func=StringAttr(func)
+
+        builtin=BoolType(builtin)
+
         # By default the type is empty attribute as the default is to call as a statement
-        res = CallExpr.build(regions=[args], attributes={"func": func, "type": type, "builtin": builtin})
+        res = CallExpr.build(regions=[Region([Block(args)])], attributes={"func": func, "type": type, "builtin": builtin})
         if verify_op:
             # We don't verify nested operations since they might have already been verified
             res.verify(verify_nested_ops=False)
         return res
 
-@dataclass
-class tinyPyIR:
-    ctx: MLContext
-
-    def __post_init__(self):
-        """
-        We need to register the attributes and operations defined in our dialect for parsing
-        so that xDSL can load in the text representation of the dialect and properly
-        structure it.
-        """
-        self.ctx.register_attr(BoolAttr)
-        self.ctx.register_attr(EmptyAttr)
-
-        self.ctx.register_op(Module)
-        self.ctx.register_op(Function)
-        self.ctx.register_op(Return)
-        self.ctx.register_op(Constant)
-        self.ctx.register_op(Assign)
-        self.ctx.register_op(Loop)
-        self.ctx.register_op(Var)
-        self.ctx.register_op(BinaryOperation)
-        self.ctx.register_op(CallExpr)
+tinyPyIR = Dialect([
+    Module,
+    Function,
+    Return,
+    Constant,
+    Assign,
+    Loop,
+    Var,
+    BinaryOperation,
+    CallExpr,
+], [
+    BoolType,
+    EmptyType,
+])
