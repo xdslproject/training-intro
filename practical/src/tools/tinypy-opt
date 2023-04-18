@@ -7,7 +7,7 @@ from io import IOBase
 from xdsl.ir import MLContext
 from xdsl.dialects.builtin import ModuleOp
 
-from tiny_py_to_standard import tiny_py_to_standard
+from tiny_py_to_standard import LowerTinyPyToStandard
 from apply_builtin import apply_builtin
 
 from tiny_py import tinyPyIR
@@ -19,13 +19,15 @@ from xdsl.xdsl_opt_main import xDSLOptMain
 
 class PsyOptMain(xDSLOptMain):
 
-    passes_native = [
-      tiny_py_to_standard,
-      apply_builtin
-    ]
+    #passes_native = [
+    #  LowerTinyPyToStandard,
+    #  apply_builtin
+    #]
 
     def register_all_passes(self):
-        self.available_passes = self.get_passes_as_dict()
+      super().register_all_passes()
+      self.register_pass(LowerTinyPyToStandard)
+
 
     def _output_fortran(prog: ModuleOp, output: IOBase):
         print_fortran(prog.ops, stream=output)
