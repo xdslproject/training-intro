@@ -232,7 +232,7 @@ class Constant(IRDLOperation):
         if type(value) is int:
             attr = IntegerAttr.from_int_and_width(value, width)
         elif type(value) is float:
-            attr = FloatAttr.from_float_and_width(value, width)
+            attr = FloatAttr(value, width)
         elif type(value) is str:
             attr = StringAttr(value)
         else:
