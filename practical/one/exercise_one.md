@@ -32,9 +32,9 @@ You can see that we have started with a function, called _hello_world_, which pr
 Now let's run this by issuing `python3.10 ex_one.py`, you should see a result similar to:
 
 ```
-builtin.module(){
+builtin.module() {
   tiny_py.module() {
-    tiny_py.function() ["fn_name" = "hello_world", "return_var" = !tiny_py.emptytoken, "args" = []] {
+    tiny_py.function() ["fn_name" = "hello_world", "return_var" = !empty, "args" = []] {
       tiny_py.call_expr() ["func" = "print", "type" = !empty, "builtin" = !bool<"True">] {
         tiny_py.constant() ["value" = "Hello world!"]
       }
