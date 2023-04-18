@@ -27,8 +27,9 @@ def python_compile(func):
         tiny_py_ir=ModuleOp.from_region_or_ops([tiny_py_ir])
 
         # Now we use the xDSL printer to output our built IR to stdio
-        printer = Printer(stream=sys.stdout)
+        printer = Printer(stream=sys.stdout, target=Printer.Target.XDSL)
         printer.print_op(tiny_py_ir)
+        print("") # Adds a new line
     return compile_wrapper
 
 class Analyzer(ast.NodeVisitor):
