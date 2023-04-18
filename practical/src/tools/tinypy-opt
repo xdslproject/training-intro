@@ -39,7 +39,7 @@ class PsyOptMain(xDSLOptMain):
     def register_all_dialects(self):
         super().register_all_dialects()
         """Register all dialects that can be used."""
-        tinypy_ir = tinyPyIR(self.ctx)
+        self.ctx.register_dialect(tinyPyIR)
 
     @staticmethod
     def get_passes_as_dict(
