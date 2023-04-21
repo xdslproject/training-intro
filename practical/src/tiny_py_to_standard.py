@@ -3,11 +3,12 @@ from xdsl.dialects.builtin import (StringAttr, ModuleOp, IntegerAttr, IntegerTyp
       ArrayAttr, i32, i64, f32, f64, IndexType, DictionaryAttr,
       Float16Type, Float32Type, Float64Type, FloatAttr, UnitAttr,
       DenseIntOrFPElementsAttr, VectorType, SymbolRefAttr)
-from xdsl.dialects import func, arith, cf, memref, scf
+from xdsl.dialects import func, arith, cf, memref, scf, llvm
 from xdsl.ir import Operation, Attribute, ParametrizedAttribute, Region, Block, SSAValue, BlockArgument, MLContext
 import tiny_py
 from xdsl.passes import ModulePass
 from util.list_ops import flatten
+from util.visitor import Visitor
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Dict
 import copy
@@ -22,6 +23,19 @@ to generate and executable
 # two entries for each representing the integer and float corresponding operation
 binary_arith_op_matching={"add": [arith.Addi, arith.Addf], "sub":[arith.Subi, arith.Subf],
                           "mult": [arith.Muli, arith.Mulf], "div": [arith.DivSI, arith.Divf]}
+
+builtin_function_name_mapping={"print": "printf"}
+
+global_declarations=[]
+
+class GetAssignedVariables(Visitor):
+  def __init__(self):
+    self.assigned_vars=[]
+
+  def traverse_assign(self, assign:tiny_py.Assign):
+    var_name=assign.var_name.data
+    if var_name not in self.assigned_vars:
+      self.assigned_vars.append(var_name)
 
 @dataclass
 class SSAValueCtx:
@@ -50,20 +64,6 @@ class SSAValueCtx:
       ssa.dictionary=dict(self.dictionary)
       return ssa
 
-@dataclass
-class BlockUpdatedVariables:
-    """
-    Context that describes the variables that have been updated in a block and need to be yielded out
-    """
-    block_updated:List[str] = field(default_factory=list)
-
-    def add(self, identifier: str):
-        if identifier not in self.block_updated:
-            self.block_updated.append(identifier)
-
-    def get(self):
-        return self.block_updated
-
 def translate_program(input_module: Module) -> ModuleOp:
     # create an empty global context
     global_ctx = SSAValueCtx()
@@ -73,6 +73,9 @@ def translate_program(input_module: Module) -> ModuleOp:
       for module in top_level_entry.children.blocks[0].ops:
         translate_toplevel(global_ctx, module, block)
 
+    assert (len(block.ops)) == 1 and isinstance(block.ops[0], func.FuncOp)
+
+    block.add_ops(global_declarations)
     body.add_block(block)
     return ModuleOp.from_region_or_ops(body)
 
@@ -98,7 +101,7 @@ def translate_fun_def(ctx: SSAValueCtx,
 
     body_contents=[]
     for op in fn_def.body.blocks[0].ops:
-        res=translate_def_or_stmt(c, None, op)
+        res=translate_def_or_stmt(c, op)
         if res is not None:
             body_contents.append(res)
 
@@ -116,18 +119,17 @@ def translate_fun_def(ctx: SSAValueCtx,
     return function_ir
 
 def translate_def_or_stmt(ctx: SSAValueCtx,
-                          block_description: BlockUpdatedVariables,
                           op: Operation) -> List[Operation]:
     """
     Translate an operation that can either be a definition or statement
     """
-    ops = try_translate_stmt(ctx, block_description, op)
+    ops = try_translate_stmt(ctx, op)
     if ops is not None:
         return ops
     # operation must have been translated by now
     raise Exception(f"Could not translate `{op}' as a definition or statement")
 
-def try_translate_stmt(ctx: SSAValueCtx, block_description: BlockUpdatedVariables,
+def try_translate_stmt(ctx: SSAValueCtx,
                        op: Operation) -> Optional[List[Operation]]:
     """
     Tries to translate op as a statement.
@@ -135,70 +137,84 @@ def try_translate_stmt(ctx: SSAValueCtx, block_description: BlockUpdatedVariable
     Returns None otherwise.
     """
     if isinstance(op, tiny_py.CallExpr):
-        return translate_call_expr_stmt(ctx, block_description, op)
+        return translate_call_expr_stmt(ctx, op)
     if isinstance(op, tiny_py.Return):
-        return translate_return(ctx, block_description, op)
+        return translate_return(ctx, op)
     if isinstance(op, tiny_py.Assign):
-        return translate_assign(ctx, block_description, op)
+        return translate_assign(ctx, op)
+    if isinstance(op, tiny_py.Loop):
+        return translate_loop(ctx, op)
 
     return None
 
 def translate_stmt(ctx: SSAValueCtx,
-                  block_description: BlockUpdatedVariables,
                   op: Operation) -> List[Operation]:
     """
     Translates op as a statement.
     If op is an expression, returns a list of the translated Operations.
     Fails otherwise.
     """
-    ops = try_translate_stmt(ctx, block_description, op)
+    ops = try_translate_stmt(ctx, op)
     if ops is None:
         raise Exception(f"Could not translate `{op}' as a statement")
     else:
         return ops
 
 def translate_return(ctx: SSAValueCtx,
-                     block_description: BlockUpdatedVariables,
                      return_stmt: tiny_py.Return) -> List[Operation]:
     """
     Translates the return operation, currently assume not returning any value
     """
     return [func.Return.get([])]
 
-def translate_loop(ctx: SSAValueCtx, block_description: BlockUpdatedVariables,
+def translate_loop(ctx: SSAValueCtx,
                   loop_stmt: tiny_py.Loop) -> List[Operation]:
     """
     Translates a loop into the standard dialect scf while construct
     """
-    ops: List[Operation] = []
 
-    block_description=BlockUpdatedVariables()
-
-    prev_ctx=ctx.copy()
+    assigned_var_finder=GetAssignedVariables()
     for op in loop_stmt.body.blocks[0].ops:
-        pass
+      assigned_var_finder.traverse(op)
 
-    start_expr, start_ssa=translate_expr(ctx, block_description, loop_stmt.from_expr.blocks[0].ops[0])
+    start_expr, start_ssa=translate_expr(ctx, loop_stmt.from_expr.blocks[0].ops[0])
     ctx[loop_stmt.variable]=start_ssa
 
     block_arg_types=[i32]
     block_args=[ctx[loop_stmt.variable]]
-    for var_name in block_description.get():
-        block_arg_types.append(ctx[var_name].typ)
-        block_args.append(prev_ctx[var_name])
+    for var_name in assigned_var_finder.assigned_vars:
+        block_arg_types.append(ctx[StringAttr(var_name)].typ)
+        block_args.append(ctx[StringAttr(var_name)])
 
-    block = Block()
+    block = Block(arg_types=block_arg_types)
 
+    end_expr, end_ssa=translate_expr(ctx, loop_stmt.to_expr.blocks[0].ops[0])
+    ctx["end_expr"]=end_ssa
+
+    compare=arith.Cmpi.get(end_ssa, block.args[0], 1)
+    condition=scf.Condition.get(compare.results[0], start_ssa)
+
+    block.add_ops(end_expr+[compare, condition])
     body=Region()
     body.add_block(block)
+
+    block_after = Block(arg_types=block_arg_types)
+
+    ops: List[Operation] = []
+    prev_ctx=ctx.copy()
+    c = SSAValueCtx(dictionary=dict(), parent_scope=ctx)
+    for idx, var_name in enumerate(assigned_var_finder.assigned_vars):
+      c[StringAttr(var_name)]=block_after.args[idx+1]
+
+    for op in loop_stmt.body.blocks[0].ops:
+        stmt_ops = translate_stmt(c, op)
+        ops += stmt_ops
 
     loop_increment=arith.Constant.from_int_and_width(1, 32)
     loop_variable_inc=arith.Addi.get(ctx[loop_stmt.variable], loop_increment.results[0])
 
-    block_after = Block.from_arg_types(block_arg_types)
-
-    yield_stmt=generate_yield(ctx, block_description, loop_variable_inc)
-
+    yield_stmt=generate_yield(c, assigned_var_finder.assigned_vars, loop_variable_inc)
+    block_after.add_ops(ops+[loop_increment, loop_variable_inc, yield_stmt])
     body_after=Region()
     body_after.add_block(block_after)
 
@@ -206,8 +222,7 @@ def translate_loop(ctx: SSAValueCtx, block_description: BlockUpdatedVariables,
 
     return start_expr+[scf.While.get([block_args], [[i32]], body, body_after)]
 
-def generate_yield(ctx: SSAValueCtx,
-                   block_description: BlockUpdatedVariables,
+def generate_yield(ctx: SSAValueCtx, assigned_vars,
                   loop_variable_inc:Operation) -> List[Operation]:
     """
       Generates a yield statement for exiting a block, this exposes
@@ -221,12 +236,12 @@ def generate_yield(ctx: SSAValueCtx,
       a variable and then store into it whenever it is updated.
     """
     yield_list=[loop_variable_inc.results[0]]
-    for var_name in block_description.get():
-        yield_list.append(ctx[var_name])
+    for var_name in assigned_vars:
+        yield_list.append(ctx[StringAttr(var_name)])
 
     return scf.Yield.get(*yield_list)
 
-def translate_assign(ctx: SSAValueCtx, block_description: BlockUpdatedVariables,
+def translate_assign(ctx: SSAValueCtx,
                       assign: tiny_py.Assign) -> List[Operation]:
     """
     Translates assignment
@@ -234,19 +249,14 @@ def translate_assign(ctx: SSAValueCtx, block_description: BlockUpdatedVariables,
     var_name = assign.var_name
     assert isinstance(var_name, StringAttr)
 
-    expr, ssa=translate_expr(ctx, block_description, assign.value.blocks[0].ops[0])
+    expr, ssa=translate_expr(ctx, assign.value.blocks[0].ops[0])
 
     # Always update the SSA context as it is this new SSA element that subsequent references
     # to the variable should reference
     ctx[var_name] = ssa
-    # If the block descriptor is not None then we are in a block and need to yield the
-    # updated SSA context on leaving that block, hence store it here for later generation
-    if block_description is not None:
-        block_description.add(var_name)
     return expr
 
 def translate_call_expr_stmt(ctx: SSAValueCtx,
-                             block_description: BlockUpdatedVariables,
                              call_expr: tiny_py.CallExpr, is_expr=False) -> List[Operation]:
     """
     Translates a call expression or statement, it's slightly different how we handle these depending
@@ -254,26 +264,37 @@ def translate_call_expr_stmt(ctx: SSAValueCtx,
     """
     ops: List[Operation] = []
     args: List[SSAValue] = []
+    arg_types = []
 
     # Generate arguments that will be passed to the call
     for arg in call_expr.args.blocks[0].ops:
-        op, arg = translate_expr(ctx, block_description, arg)
+        op, arg = translate_expr(ctx, arg)
         if op is not None: ops += op
         args.append(arg)
+        arg_types.append(arg.typ)
 
-    name = call_expr.attributes["func"]
+    name = call_expr.attributes["func"].data
+
+    if call_expr.builtin.data and name in builtin_function_name_mapping:
+        # If this is a built in function and that name is in the mapping dictionary
+        # then replace the name, for instance translating print to printf
+        name=builtin_function_name_mapping[name]
+
     if is_expr:
         result_type=try_translate_type(call_expr.type)
-        call = func.Call.create(attributes={"callee": SymbolRefAttr.from_string_attr(name)},
+        call = func.Call.create(attributes={"callee": SymbolRefAttr(name)},
                                 operands=args, result_types=[result_type])
     else:
-        call = func.Call.create(attributes={"callee": SymbolRefAttr.from_string_attr(name)},
+        call = func.Call.create(attributes={"callee": SymbolRefAttr(name)},
                                 operands=args, result_types=[])
     ops.append(call)
+
+    if call_expr.builtin.data:
+      global_declarations.append(func.FuncOp.external(name, arg_types, []))
+
     return ops
 
 def translate_expr(ctx: SSAValueCtx,
-                   block_description: BlockUpdatedVariables,
                    op: Operation) -> Tuple[List[Operation], SSAValue]:
     """
     Translates op as an expression.
@@ -281,7 +302,7 @@ def translate_expr(ctx: SSAValueCtx,
     and the ssa value representing the translated expression.
     Fails otherwise.
     """
-    res = try_translate_expr(ctx, block_description, op)
+    res = try_translate_expr(ctx, op)
     if res is None:
         raise Exception(f"Could not translate `{op}' as an expression")
     else:
@@ -289,7 +310,6 @@ def translate_expr(ctx: SSAValueCtx,
         return ops, ssa_value
 
 def try_translate_expr(ctx: SSAValueCtx,
-                       block_description: BlockUpdatedVariables,
                        op: Operation) -> Optional[Tuple[List[Operation], SSAValue]]:
     """
     Tries to translate op as an expression.
@@ -301,7 +321,7 @@ def try_translate_expr(ctx: SSAValueCtx,
         op = translate_constant(op)
         return op
     if isinstance(op, tiny_py.BinaryOperation):
-        op = translate_binary_expr(ctx, block_description, op)
+        op = translate_binary_expr(ctx, op)
         return op
     if isinstance(op, tiny_py.Var):
         # A variable is very simple, so just handle it here
@@ -318,9 +338,14 @@ def translate_constant(op: tiny_py.Constant) -> Operation:
     value = op.attributes["value"]
 
     if isinstance(value, StringAttr):
-        global_memref=memref.Global.get(StringAttr("str0"), memref.MemRefType.from_element_type_and_shape(i32, [len(value.data)]), value)
-        memref_get=memref.GetGlobal.get("str0", memref.MemRefType.from_element_type_and_shape(i32, [len(value.data)]))
-        return [global_memref, memref_get], memref_get.results[0]
+        value=StringAttr(value.data+"\n")
+        global_type=llvm.LLVMArrayType.from_size_and_type(len(value.data), IntegerType(8))
+        global_op=llvm.GlobalOp.get(global_type, "str0", "internal", 0, True, value=value, unnamed_addr=0)
+        global_declarations.append(global_op)
+
+        global_lookup=llvm.AddressOfOp.get("str0", llvm.LLVMPointerType.typed(global_type))
+        element_pointer=llvm.GEPOp.get(global_lookup.results[0], llvm.LLVMPointerType.typed(IntegerType(8)), [0,0])
+        return [global_lookup, element_pointer], element_pointer.results[0]
 
     if isinstance(value, FloatAttr):
         const= arith.Constant.create(attributes={"value": value},
@@ -335,13 +360,12 @@ def translate_constant(op: tiny_py.Constant) -> Operation:
     raise Exception(f"Could not translate `{op}' as a literal")
 
 def translate_binary_expr(ctx: SSAValueCtx,
-                          block_description: BlockUpdatedVariables,
                           op: Operation) -> Operation:
     """
     Translates a binary expression
     """
-    lhs, lhs_ssa=translate_expr(ctx, block_description, op.lhs.blocks[0].ops[0])
-    rhs, rhs_ssa=translate_expr(ctx, block_description, op.rhs.blocks[0].ops[0])
+    lhs, lhs_ssa=translate_expr(ctx, op.lhs.blocks[0].ops[0])
+    rhs, rhs_ssa=translate_expr(ctx, op.rhs.blocks[0].ops[0])
     operand_type = lhs_ssa.typ
     if op.op.data in binary_arith_op_matching:
         # We match here on the LHS type, for a more advanced coverage if the types are different
