@@ -113,7 +113,7 @@ Here we are calling the _mlir-opt_ tool, which is part of MLIR, to undertake som
 
 ### Running on ARCHER2
 
-We can execute the _test_ executable direclty on the login node if we wish by:
+We can execute the _test_ executable direclty on the login node if we wish by (or if you are following the tutorial on your local machine):
 
 ```bash
 user@login01:~$ ./test
