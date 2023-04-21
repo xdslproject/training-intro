@@ -7,9 +7,9 @@ In this practical we are going to look at compiling a simple Python function to 
 
 ## Getting started
 
-Firstly, you should connect to ARCHER2 via the login credentials supplied to you by the instructors. You will need to connect to the machine via ssh, for instance `ssh username@login.archer2.ac.uk`. Once you have connected you should then change into your _work_ directory, via issuing `cd /work/y14/y14/$USER`, as this is the filesystem that is visible to the compute nodes.
+Details about how to access your account on ARCHER2 and set up the environment that we will need for these practicals can be found on the [ARCHER2 setup instructions](https://github.com/xdslproject/training-intro/blob/main/practical/general/ARCHER2.md) page. If you are undertaking these tutorials locally then you can view the [local setup instructions](https://github.com/xdslproject/training-intro/blob/main/practical/general/local.md).
 
-The guest accounts that you are using have been configured to contain the requires files for this practical and the correct environment settings such as PYTHONPATHS. If you do this exercise on your own machines then you will need to download these from our website [xdsl.dev](https://www.xdsl.dev).
+Irrespective of the machine you are using, it is assumed that you have a command line terminal in the _training-intro/practical/one_ directory.
 
 ## First steps
 
