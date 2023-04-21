@@ -4,6 +4,7 @@ In this practical we are going to get deeping into what is going on in our _tiny
 
 Learning objectives are:
 
+* A consolidation of the concepts explored in practical one
 * To understand how dialects are expressed and can be modified
 * Gain a more indepth understanding of transformations
 * Awareness of the _for_ operation in the _scf_ dialect
@@ -20,7 +21,29 @@ Irrespective of the machine you are using, it is assumed that you have a command
 
 ## The starting point
 
-The first thing to do is to have a look at the code _ex_two.py_ which loops up to 100000, adding a value to a running total on each iteration. Firstly let's generate the tiny py IR to see what this currently looks like, do this by issuing `python3.10 ex_two.py`, the output will look like the following:
+The first thing to do is to have a look at the code _ex_two.py_ which loops up to 100000, adding a floating point value to a running total on each iteration and then printing out the final summed value at the end. 
+
+```python
+from python_compiler import python_compile   
+
+@python_compile
+def ex_two():
+    val=0.0
+    add_val=88.2
+    for a in range(0, 100000):
+      val=val+add_val
+    print(val)
+
+ex_two()
+```
+
+Firstly, let's generate the tiny py IR:
+
+```bash
+user@login01:~$ python3.10 ex_two.py
+```
+
+The output will look like the following, and you can also find it in the newly created _output.xdsl_ file.
 
 ```
 builtin.module() {
@@ -32,54 +55,86 @@ builtin.module() {
       tiny_py.assign() ["var_name" = "add_val"] {
         tiny_py.constant() ["value" = 88.2 : !f32]
       }
+      tiny_py.call_expr() ["func" = "print", "type" = !empty, "builtin" = !bool<"True">] {
+        tiny_py.var() ["variable" = "val"]
+      }
     }
   }
 }
 ```
 
-As you can see, we have the variable declarations, but the loop and everything within it is missing, which is because our compiler is currently unaware of loops and as such unable to represent it. 
+As you can see, we have the variable declarations and print statement at the end, but the loop and everything within it is missing. Don't worry, this is intentional and because our compiler is currently unaware of loops. The main purpose of this exercise is to add in support for handling loops. 
 
-## Enhancing the dialect
+## Enhancing the frontend
 
-The first step is to enhance the _tiny_py_ dialect so that it is capable of representing a loop. Open up the _tiny_py.py_ file that is in _src/dialects_ and at line 125 you will see we have started the _Loop_ class. The _get_ function has been completed, as has the name, but we need to fill in the field that will be present here. Let's take a quick look at the code so far in this function (omitting the comments that are in the code to keep it a little shorter here) to explain what it is doing. This is below, and the _irdl_op_definition_ decorator annotates that this Operation follows the IRDL definition that we covered in the second lecture. The name of the operation is defined and the _get_ method creates an instance of this based upon the arguments provided. You can see that to create the operation a string (the variable name) and three operations are passed in. There are four members, that we will need to specify, and these can be seen in the _Loop.build_ construct where the _variable_ attribute is set and three regions. As we discussed in lecture one, each region is a list of operations, hence _from_expr_ and _to_expr_ needed to be wrapped as a list (you can see that _body_ is already a list of operations).
+### Supporting loops in the tiny py dialect
+
+The first step is to enhance the _tiny_py_ dialect so that it is capable of representing a loop. Open up the _tiny_py.py_ file that is in _src/dialects_ and at line 125 you will see we have started the _Loop_ class. The _get_ function has been completed, as has the name, but we need to fill in the fields that will comprise the operation's fields (its operands, attributes, regions and results). 
+
+Let's take a quick look at the code so far in this function (omitting the comments that are in the code to keep it a little shorter here) to explain what it is doing. This is below, and the _irdl_op_definition_ decorator annotates that this Operation follows the IRDL definition that we covered in the second lecture. The name of the operation is defined and the _get_ method creates an instance of this based upon the arguments provided. You can see that to create the operation a string (the variable name) and three operations are passed in. These comprise the four members of the operation, and it is these we need to add a definition for. 
 
 ```Python
 @irdl_op_definition
-class Loop(Operation):
+class Loop(IRDLOperation):
     name = "tiny_py.loop"
 
     @staticmethod
-    def get(variable: str,
+    def get(variable: str | StringAttr,
             from_expr: Operation,
             to_expr: Operation,
             body: List[Operation],
             verify_op: bool = True) -> If:
-        res = Loop.build(attributes={"variable": variable}, regions=[[from_expr], [to_expr], body])
+        if isinstance(variable, str):
+            # If variable is a string then wrap it in StringAttr
+            variable=StringAttr(variable)
+
+        res = Loop.build(attributes={"variable": variable}, regions=[Region([Block([from_expr])]),
+            Region([Block([to_expr])]), Region([Block(body)])])
         if verify_op:
             # We don't verify nested operations since they might have already been verified
             res.verify(verify_nested_ops=False)
         return res
 ```
 
+You can see that we construct a string attribute (_StringAttr_) if the _variable_ is a raw string, and then these four fields are provided to the _Loop.build_ method call, where the _variable_ attribute is set and three regions specified. As we discussed in lecture one, each region contains a list of blocks which itself contains a list of operations. Hence we are constructing _Regions_ from a list of _Blocks_ and these from a list of operations. You can see from the method signature that _body_ is already a list of operations, and hence it is not wrapped in a list here.
 
 There should be four fields, _variable_ which is an attribute of type _StringAttr_, and then three regions which are called _from_expr_, _to_expr_, and _body_. To understand the format these should follow then you can look at other operator definitions in the dialect, for instance _Var_ defines a string attribute member and _lhs_ and _rhs_ in _BinaryOperation_ are regions.
 
-Once you have completed the definition of this operation in the _tiny_py_ dialect then the next step is to generate this from the parser. If you open the _python_compiler.py_ file and navigate to line 93, you will see the function that handles a Python for loop. Again, we have started this off for you and the code below illustrates this (again we have removed comments from here for clarity). It can be seen that each member of the loop's body is visited and the resulting operations are stored in a loop. For the loop bounds we are simplifying things quite a bit here to make our life easier, where even though a Python _Range_ is provided, we extract the low and high members as expressions and set these as _expr_from_ and _expr_to_ respectively. A better, and more flexible approach, would be to encode the range in the _tiny_py_ dialect and then have this evaluated each loop iteration but that would make things more complex and is left as an exercise to the interested participant if they so wish.
+>**Not sure or having problems?**
+> Please feel free to ask if there is anything you are unsure about, or you can check the [sample solution](https://github.com/xdslproject/training-intro/blob/main/practical/two/sample_solutions/tiny_py.py)
+
+### Connecting up tiny py loop operation
+
+Once you have completed the definition of this operation in the _tiny_py_ dialect then the next step is to generate this from the parser. If you open the _python_compiler.py_ file and navigate to line 100, you will see the function that handles a Python for loop. Again, we have started this off for you as illustrated by the code below (again we have removed comments from here for clarity). 
 
 ```Python
-    def visit_For(self, node):       
-        contents=[]
-        for a in node.body:
-            contents.append(self.visit(a))
-        expr_from=self.visit(node.iter.args[0])
-        expr_to=self.visit(node.iter.args[1])
+def visit_For(self, node):       
+    contents=[]
+    for a in node.body:
+        contents.append(self.visit(a))
+    expr_from=self.visit(node.iter.args[0])
+    expr_to=self.visit(node.iter.args[1])
         
-        return None  
+    # Now you need to construct the tiny_py Loop and return it
+    return None  
 ```
 
-Instead of returning _None_ from this visit function we need to construct the _Loop_ operation from the _tiny_py_ dialect. You will use the _Loop.get_ function, providing the name of the loop variable (which you can obtain via _node.target.id_ and the three regions).
+In this code each member comprising the body of the loop is visited and the resulting operations are stored in the _contents_ list. We are then processing the loop bounds and for the purposes of this tutorial are simplifying things quite a bit here where we extract the lower and upper bounds from the Python _Range_ and set these as _expr_from_ and _expr_to_ respectively.
 
-Once you have done this, rerun _python3.10 ex_two.py_ and you should see the output below where, as you can see, the loop is now represented containing the _variable_ string as an attribute and the three regions (each of these are between the { } braces).
+Currently this _visit_For_ function returns _None_ and instead we need to construct the _tiny_py_ dialect's _Loop_ operation. To do this you will use the _Loop.get_ function, providing the name of the loop variable (which you can obtain via _node.target.id_ and _expr_from_, _expr_to_, and _contents_ as the region arguments.
+
+>**Not sure or having problems?**
+> Please feel free to ask if there is anything you are unsure about, or you can check the [sample solution](https://github.com/xdslproject/training-intro/blob/main/practical/two/sample_solutions/python_compiler.py)
+
+### Obtaining the tiny py IR
+
+Now we have added support in our tiny py dialect for loops and instructed the parser how to generate these we can rerun our code to generate our IR which should now include the loop and its members. 
+
+```bash
+user@login01:~$ python3.10 ex_two.py
+```
+
+You should see the output below where, as you can see, the loop is now represented containing the _variable_ string as an attribute and the three regions (each of these are between the { } braces).
 
 ```
 builtin.module() {
@@ -103,6 +158,9 @@ builtin.module() {
             tiny_py.var() ["variable" = "add_val"]
           }
         }
+      }
+      tiny_py.call_expr() ["func" = "print", "type" = !empty, "builtin" = !bool<"True">] {
+        tiny_py.var() ["variable" = "val"]
       }
     }
   }
