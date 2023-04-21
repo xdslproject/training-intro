@@ -162,19 +162,25 @@ Now run the translation pass, ``tinypy-opt two.xdsl -p tiny-py-to-standard -t ml
     %0 = "arith.constant"() {"value" = 0.0 : f32} : () -> f32
     %1 = "arith.constant"() {"value" = 88.2 : f32} : () -> f32
     %2 = "arith.constant"() {"value" = 0 : i32} : () -> i32
-    %3 = "scf.while"(%2, %0) ({
-      %4 = "arith.constant"() {"value" = 100000 : i32} : () -> i32
-      %5 = "arith.cmpi"(%4, %2) {"predicate" = 1 : i64} : (i32, i32) -> i1
-      "scf.condition"(%5, %2) : (i1, i32) -> ()
-    }, {
-    ^0(%6 : i32, %7 : f32):
-      %8 = "arith.addf"(%0, %1) : (f32, f32) -> f32
-      %9 = "arith.constant"() {"value" = 1 : i32} : () -> i32
-      %10 = "arith.addi"(%2, %9) : (i32, i32) -> i32
-      "scf.yield"(%10, %8) : (i32, f32) -> ()
-    }) : (i32, f32) -> i32
+    %3 = "arith.constant"() {"value" = 100000 : i32} : () -> i32
+    %4 = "arith.index_cast"(%2) : (i32) -> index
+    %5 = "arith.index_cast"(%3) : (i32) -> index
+    %6 = "arith.constant"() {"value" = 1 : index} : () -> index
+    %7 = "scf.for"(%4, %5, %6, %0) ({
+    ^0(%8 : index, %9 : f32):
+      %10 = "arith.addf"(%9, %1) : (f32, f32) -> f32
+      "scf.yield"(%10) : (f32) -> ()
+    }) : (index, index, index, f32) -> f32
+    %11 = "llvm.mlir.addressof"() {"global_name" = @str0} : () -> !llvm.ptr<!llvm.array<3 x i8>>
+    %12 = "llvm.getelementptr"(%11) {"rawConstantIndices" = array<i32: 0, 0>} : (!llvm.ptr<!llvm.array<3 x i8>>) -> !llvm.ptr<i8>
+    %13 = "arith.extf"(%7) : (f32) -> f64
+    "func.call"(%12, %13) {"callee" = @printf} : (!llvm.ptr<i8>, f64) -> ()
     "func.return"() : () -> ()
-  }) {"sym_name" = "ex_two", "function_type" = () -> (), "sym_visibility" = "public"} : () -> ()
+  }) {"sym_name" = "main", "function_type" = () -> (), "sym_visibility" = "public"} : () -> ()
+  "llvm.mlir.global"() ({
+  }) {"global_type" = !llvm.array<3 x i8>, "sym_name" = "str0", "linkage" = #llvm.linkage<"internal">, "addr_space" = 0 : i32, "constant", "value" = "%f\n", "unnamed_addr" = 0 : i64} : () -> ()
+  "func.func"() ({
+  }) {"sym_name" = "printf", "function_type" = (!llvm.ptr<i8>, f64) -> (), "sym_visibility" = "private"} : () -> ()
 }) : () -> ()
 ```
 
@@ -183,7 +189,7 @@ Now run the translation pass, ``tinypy-opt two.xdsl -p tiny-py-to-standard -t ml
 We are now ready to feed this into LLVM and compile the code, similarly to exercise one you should create a file with the _.mlir_ ending, for instance _ex_two.mlir_ and into it copy the output from the above passes (redirecting stdio to the file is probably easiest). The execute the following (you can see we provide _-convert-std-to-llvm_ as an argument to _mlir_opt_ which converts all standard dialects to the LLVM dialect):
 
 ```bash
-user@login01:~$ mlir-opt -convert-std-to-llvm ex_two.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
+user@login01:~$ mlir-opt --pass-pipeline="builtin.module(loop-invariant-code-motion, convert-scf-to-cf, convert-cf-to-llvm{index-bitwidth=64}, convert-arith-to-llvm{index-bitwidth=64}, convert-func-to-llvm, reconcile-unrealized-casts)" ex2.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
 ```
 
 A submission script called _sub_ex2.srun_ is prepared and you will need to execute `sbatch sub_ex2.srun` at the command line. This will batch queue the job and, when a compute node is available, the executable will run and output stored in a file that you can be viewed.
