@@ -45,4 +45,4 @@ user@local:~$ make install -j 12
 
 This will build LLVM across 12 cores, you can change this number based upon the configuration of your system. Alternatively, you can issue `ninja -C $builddir install` to build via Ninja.
 
-For more details about building LLVM or troubleshooting you can visit the (LLVM getting started page)[https://llvm.org/docs/GettingStarted.html]
+For more details about building LLVM or troubleshooting you can visit the [LLVM getting started page](https://llvm.org/docs/GettingStarted.html)
