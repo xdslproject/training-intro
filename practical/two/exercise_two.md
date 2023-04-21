@@ -1,11 +1,22 @@
 # Exercise Two
 
-In this practical we are going to _get into the guts_ of what is going on in our _tiny_py_ dialect and transformations by developing an enhancement to these in order to support a wider range of Python in our compiler. Specifically, we are going to add support for the loop construct which will provide an insight into how these things are coded.
+In this practical we are going to get deeping into what is going on in our _tiny_py_ dialect and transformations by developing an enhancement to these in order to support a wider range of Python in our compiler. Specifically, we are going to add support for the loop construct which will provide an insight into how these things are coded.
+
+Learning objectives are:
+
+* To understand how dialects are expressed and can be modified
+* Gain a more indepth understanding of transformations
+* Awareness of the _for_ operation in the _scf_ dialect
+* To show more advanced ways in which _mlir-opt_ can be driven to undertake additional transformations
 
 Sample solutions to this exercise are provided in [sample_solutions](sample_solutions) in-case you get stuck or just want to compare your efforts with ours.
 
 >**Having problems?**  
 > As you go through this exercise if there is anything you are unsure about or are stuck on then please do not hesitate to ask one of the tutorial demonstrators and we will be happy to assist!
+
+Remember, details about how to access your account on ARCHER2 and set up the environment that we will need for these practicals can be found on the [ARCHER2 setup instructions](https://github.com/xdslproject/training-intro/blob/main/practical/general/ARCHER2.md) page. If you are undertaking these tutorials locally then you can view the [local setup instructions](https://github.com/xdslproject/training-intro/blob/main/practical/general/local.md).
+
+Irrespective of the machine you are using, it is assumed that you have a command line terminal in the _training-intro/practical/two_ directory.
 
 ## The starting point
 
