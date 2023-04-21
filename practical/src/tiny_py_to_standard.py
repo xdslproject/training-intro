@@ -114,7 +114,9 @@ def translate_fun_def(ctx: SSAValueCtx,
     body.add_block(block)
 
     # To keep it very simple we have an empty list of arguments to our function definition
-    function_ir=func.FuncOp.from_region(routine_name.data, arg_types, [], body)
+    # Also to keep it simple we hard code the name to be main, as this is the program
+    # entry point (could instead use routine_name.data to obtain the string value)
+    function_ir=func.FuncOp.from_region("main", arg_types, [], body)
     function_ir.attributes["sym_visibility"]=StringAttr("public")
 
     return function_ir
