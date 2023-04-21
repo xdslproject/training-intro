@@ -1,4 +1,4 @@
-# A local environment
+# Using a local environment
 
 Whilst the intention of this tutorial is to undertake the practical elements on the ARCHER2 supercomputer, we also provide instructions so that people can undertake the practicals on a local machine too. We assume that you are using a Linux based system here, for other operating systems the instructions will be similiar but likely with some small variations.
 
