@@ -1,6 +1,11 @@
 # Exercise One
 
-In this practical we are going to look at compiling a simple Python function to run on the compute node of ARCHER2, a Cray EX. This will give you an introduction to MLIR and xDSL, as well as getting you onto the ARCHER2 supercomputer where we will be doing our practicals today.
+In this practical we are going to look at compiling a simple Python function to run on the compute node of ARCHER2, a Cray EX. This will give you an introduction to MLIR and xDSL, as well as getting you onto the ARCHER2 supercomputer where we will be doing our practicals today. Learning objectives are:
+
+* To provide a concrete end-to-end flow from source code to executable via xDSL and MLIR
+* To illustrate how different dialects and transformations can be mixed and interact within the compilation flow
+* To show how the different xDSL, MLIR, and LLVM tools can be used to manipulate the IR
+* To introduce the central MLIR concepts in a practical fashion
 
 >**Having problems?**
 > As you go through this exercise if there is anything you are unsure about or are stuck on then please do not hesitate to ask one of the tutorial demonstrators and we will be happy to assist!
