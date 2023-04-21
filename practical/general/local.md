@@ -46,3 +46,37 @@ user@local:~$ make install -j 12
 This will build LLVM across 12 cores, you can change this number based upon the configuration of your system. Alternatively, you can issue `ninja -C $builddir install` to build via Ninja.
 
 For more details about building LLVM or troubleshooting you can visit the [LLVM getting started page](https://llvm.org/docs/GettingStarted.html)
+
+## Installing xDSL
+
+You have two options to install xDSL, you can either get the latest release via pip or download the source from GitHub. The benefit of using pip is that it will install the requiresite Python packages too, whereas when you execute from source you must get these manually (via pip). 
+
+### Installing via pip
+
+You can install xDSL from pip by executing the following:
+
+```bash
+user@local:~$ pip install xdsl
+```
+
+### Installing and running from source
+
+To install and run from source you will need to clone the xDSL GitHub repository:
+
+```bash
+user@local:~$ git clone https://github.com/xdslproject/xdsl.git
+```
+
+You will then need to append the top level to your _PYTHONPATH_, for instance, assuming you have cloned xDSL into your home directory:
+
+```bash
+user@local:~$ export PYTHONPATH=$HOME/xdsl:$PYTHONPATH
+```
+
+## Installing the tutorial files
+
+All the material in the tutorials can be downloaded from GitHub via:
+
+```bash
+user@local:~$ git clone https://github.com/xdslproject/training-intro.git
+```
