@@ -30,6 +30,12 @@ def python_compile(func):
         printer = Printer(stream=sys.stdout, target=Printer.Target.XDSL)
         printer.print_op(tiny_py_ir)
         print("") # Adds a new line
+
+        f = open("output.xdsl", "w")
+        printer_file = Printer(stream=f, target=Printer.Target.XDSL)
+        printer_file.print_op(tiny_py_ir)
+        f.write("") # Terminates file on new line
+        f.close()
     return compile_wrapper
 
 class Analyzer(ast.NodeVisitor):
