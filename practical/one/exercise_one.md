@@ -2,7 +2,7 @@
 
 In this practical we are going to look at compiling a simple Python function to run on the compute node of ARCHER2, a Cray EX. This will give you an introduction to MLIR and xDSL, as well as getting you onto the ARCHER2 supercomputer where we will be doing our practicals today.
 
->**Having problems?**  
+>**Having problems?**
 > As you go through this exercise if there is anything you are unsure about or are stuck on then please do not hesitate to ask one of the tutorial demonstrators and we will be happy to assist!
 
 ## Getting started
@@ -18,7 +18,7 @@ Once you have changed to your work directory, now _cd_ into the _training-intro/
 Let's take a look inside the _ex_one.py_ file to see how this is driven.
 
 ```python
-from python_compiler import python_compile   
+from python_compiler import python_compile
 
 @python_compile
 def hello_world():
@@ -29,7 +29,13 @@ hello_world()
 
 You can see that we have started with a function, called _hello_world_, which prints a message to standard out. The code imports the _python_compiler_ Python script which defines the _python_compile_ decorator, and this is used to decorate the functions that we wish to compile. The _python_compiler_ script can be found in the _training-intro/src_ directory, this parses the Python code and we will look at this a bit later on.
 
-Now let's run this by issuing `python3.10 ex_one.py`, you should see a result similar to:
+Let's do the first step of our compilation by issuing the following:
+
+```bash
+user@login01:~$ python3.10 ex_one.py
+```
+
+Congratulations, you have run your first bit of xDSL/MLIR! This won't actually execute the code, but instead builds up an Intermediate Representation (IR) of the code that we wish to compile in that function. The output of this is as follows:
 
 ```
 builtin.module() {
@@ -43,15 +49,23 @@ builtin.module() {
 }
 ```
 
-Congratulations, you have run your first bit of xDSL/MLIR, now let's take a look at what this means! Firstly, as we talked about in the initial presentation, all operations are prefixed with the dialect name that they belong to. Here you can see that we are using two dialects, the _builtin_ dialect for the _module_ operation and the _tinypy_ dialect for other operations. Hopefully from looking at this IR representation you can see how it corresponsd to the origional Python code, where _tiny_py.function_ defines the _hello_world_ function and _tiny_py.call_expr_ represents the call into the _print_ function, which is using the attributed _builtin_ to represent whether it is a built in Python function or user defined. 
+Now let's take a look at what this means. Firstly, as we talked about in the initial presentation, all operations are prefixed with the dialect name that they belong to. Here you can see that we are using two dialects, the _builtin_ dialect for the _module_ operation and the _tinypy_ dialect for other operations. Hopefully from looking at this IR representation you can see how it corresponds to the origional Python code, where _tiny_py.function_ defines the _hello_world_ function and _tiny_py.call_expr_ represents the call into the _print_ function, which is using the attributed _builtin_ to represent whether it is a built in Python function or user defined. 
 
 Lastly, you can also see how the value _"Hello World!"_ is represented by the _tiny_py.constant_ operation and sits hierarchically inside the _tiny_py.call_expr_ operation. This is an example of nesting regions, where the _tiny_py.call_expr_ operation contains a region, which contains blocks (one in this case) which then contains this operation.
 
 ## Moving towards an executable
 
-The _tiny_py_ dialect that you have seen above is one that we have defined for this exercise. It's intentionally very simple, can be found at _src/dialects/tiny_py.py_ and we will modify it a bit later on in the practical. Wanting to get an executable out of this that we can actually run on a supercomputer, we have a few options. Firstly we could write some transformations that directly generate LLVM-IR (or something else such as C) from this dialect. That would be OK, and indeed this is how the Devito DSL uses xDSL, but potentially time consuming and there is an easier way to achieve what we want. Instead, we can transform to the standard MLIR dialects which themselves have existing transformations into LLVM-IR. To this end we need to undertake a transformation pass on the IR generated above to undertake such a transformation. 
+The _tiny_py_ dialect that we are using here is one that we have defined for this exercise. It's intentionally very simple and can be found at _src/dialects/tiny_py.py_ . We will modify this a bit later on in practical two, but first let's focus on the full compiler flow to get an executable out and run on the ARCHER2 supercomputer. We actually have a few options here, firstly we could write some transformations that directly generate LLVM-IR (or something else such as C) from this dialect. That would be OK, but potentially time consuming as one would need to explicitly write the transformations that convert this high level representation of a user's program into the very low level LLVM-IR. Instead, there is a much easier way and this is where MLIR comes in. We can transform this IR into standard MLIR dialects which themselves have transformations, written by the MLIR/LLVM community, to convert these into LLVM-IR. These transformations tend to be called _lowerings_, as we will initially lower from this very language (here Tiny Python) specific dialect into relatively lower level dialects, the standard MLIR dialects, and from there lower into the much lower level LLVM dialect. To this end we need to undertake a transformation pass on the IR that was generated above to undertake such a lowering. 
 
-We use the _tinypy_opt_ tool, which enables us to drive the parsing, printing, and manipulations of IRs from the command line. LLVM and MLIR have adopted _-opt_ tools as a standard, which xDSL also adopts. Create a new file called _ex_one.xdsl_ and in it place the output of the previous section (or alternatively redirect stdio from the command to this file). At the command line execute _./tinypy-opt ex_one.xdsl -p tiny-py-to-standard -t mlir_ , the output will appear similar to:
+## The opt driver tool
+
+LLVM and MLIR have adopted _-opt_ tools as a standard to be used to drive manipulation of IR, and xDSL also follows this naming convention. We have provided a corresponding tool for our tinypy compiler called _tinypy_opt_ , and this provides a convenient way in which to drive the parsing, printing, and manipulation from the command line. If you look in the current directory you will see a new file called _output.xdsl_, this is a text file that was created in the last step when we ran the _python3.10 ex_one.py_ command, and contains exactly the same output as was printed to the screen and we saw above. We will now operate on that file to lower it to the standard dialects, at the command line execute to following: 
+
+```bash
+user@login01:~$ ./tinypy-opt output.xdsl -p tiny-py-to-standard -t mlir
+```
+
+You will see that the following output will be displayed to screen:
 
 ```
 "builtin.module"() ({
@@ -60,7 +74,7 @@ We use the _tinypy_opt_ tool, which enables us to drive the parsing, printing, a
     %1 = "llvm.getelementptr"(%0) {"rawConstantIndices" = array<i32: 0, 0>} : (!llvm.ptr<!llvm.array<13 x i8>>) -> !llvm.ptr<i8>
     "func.call"(%1) {"callee" = @printf} : (!llvm.ptr<i8>) -> ()
     "func.return"() : () -> ()
-  }) {"sym_name" = "hello_world", "function_type" = () -> (), "sym_visibility" = "public"} : () -> ()
+  }) {"sym_name" = "main", "function_type" = () -> (), "sym_visibility" = "public"} : () -> ()
   "llvm.mlir.global"() ({
   }) {"global_type" = !llvm.array<13 x i8>, "sym_name" = "str0", "linkage" = #llvm.linkage<"internal">, "addr_space" = 0 : i32, "constant", "value" = "Hello world!\n", "unnamed_addr" = 0 : i64} : () -> ()
   "func.func"() ({
@@ -68,49 +82,45 @@ We use the _tinypy_opt_ tool, which enables us to drive the parsing, printing, a
 }) : () -> ()
 ```
 
-There are a few things going on here, so let's unpack it step by step. Firstly, we are providing the IR stored in the _eg_one.xdsl_ file as an input to the _tinypy-opt_ tool. This is simply the IR that was generated in the previous section and then, using the _-p_ flag we are instructing the that the _tiny-py-to-standard_ pass should be run over that IR to transform it. Lastly, the _-t_ flag instructs the tool which target to output the IR for, in this case we are selecting MLIR format so that it can be fed directly into the MLIR tooling itself.
+There are a few things going on here, so let's unpack it step by step. Firstly, we are providing the IR stored in the _output.xdsl_ file as an input to the _tinypy-opt_ tool. Using the _-p_ flag, we are instructing that the _tiny-py-to-standard_ pass should be run over this IR and transform it. Lastly, the _-t_ flag instructs the tool which technology to structure the output IR for, in this case we are selecting the MLIR format which can be fed directly into the MLIR tooling itself.
 
-You can see that this IR looks quite different to the IR previously where it is in a much flatter form and using SSA. This goes back to the point we made in the lectures about progressive lowering, where we have taken something more structured (the _tiny_py_) and lowered it to a representation that is closer to the concrete implementation level. For instance, the argument _"Hello World!"_ is now declared as a global and its memory reference is passed as the argument to the _print_ function. Whilst this is still human readable and debuggable, effectively we have removed a lot of the Python-ness that is present in the _tiny_py_ dialect in this pass.
+You can see that this IR looks quite different to the IR previously where it is in a much flatter form. This is known as Static Single-Assignment (SSA) form and is a common standard used across many compilers for structuring the IR. This goes back to the point we made in the lectures about progressive lowering, where we have taken something more structured (the _tiny_py_) and lowered it to a representation that is closer to the concrete implementation level. 
 
-## Handling built in function calls
+## Describing the output MLIR in more detail
 
-There is just one more activity that needs to happen before we can build the code, and that is to handle the the _print_ function. Specifically, _print_ is an inbuilt Python function whereas when we compile our code we want it to call _printf_ from the standard library. Furthermore, as this is not a user defined function, we need to tell the compiler that it is external.
+The SSA IR that we have just generated is actually rather simple, even if it looks a little off putting at first. At the top level is a _builtin.module_, where all contents must reside within regions of a module. The first region contains the _func_ operation that is part of the _func_ dialect and used to define functions. A couple of lines down you can see that we are issuing the _call_ operation of the _func_ dialect, with the _callee_ (the function name) being _printf_. As an argument we pass the SSA value _%1_ to this as an argument. This is where this gets slightly more complex, you can see further down that we have the _mlir.global_ operation (which is part of the _llvm_ dialect) and this defines our string _"Hello World!"_ and calls it _str0_. The _mlir.addressof_ operation is retrieving this and then the _getelementptr_ operation looks up the pointer to the first element of the array which is then passed to the _printf_ call as _%1_. 
 
-We have developed another transformation pass, _apply-builtin_, which will manipulate the IR to handle calling built in functions. Specifically, this transformation is looking for nodes in the IR of type _tiny_py.call_expr_ and then checking the _builtin_ flag. If this is true it will change the name of the function to _printf_, add a newline at the end of the string, and also prefix an operation at the top level of the module to direct that this is an external function. 
+The _getelementptr_ operation is a good example to explain to give you a clearer idea of how operations are generally working. Here you can see that we are providing SSA value _%0_ as an argument (wich is the result of _mlir.addressof_) and of type _!llvm.ptr<!llvm.array<13 x i8>>_, which is an LLVM pointer to an array of thirteen 8 bit elements. The attribute _rawConstantIndices_ insructs the operation which element of this input it should return the pointer to, in this case element 0, and the result of this (referenced as _%1_ in the SSA) is _!llvm.ptr<i8>_ i.e. an LLVM pointer to an 8-bit value. From this explanation you should be able to see where the arguments to the operations are, where their types are specified, where the return type(s) if present are provided and how an operation's attributes are defined.
 
-To use this pass then execute `./tinypy-opt eg_one.xdsl -p apply-builtin,tiny-py-to-standard -t mlir_` which will run the _apply-builtin_ pass first and then the _tiny-py-to-standard_ pass second. The output will look something like:
-
-```
-"builtin.module"() ({
-"llvm.mlir.global"() ({
-  }) {addr_space = 0 : i32, constant, global_type = !llvm.array<14 x i8>, linkage = #llvm.linkage<internal>, sym_name = "str0", unnamed_addr = 0 : i64, value = "Hello world!\0A\00"} : () -> ()
-"llvm.func"() ({
-  }) {CConv = #llvm.cconv<ccc>, function_type = !llvm.func<i32 (ptr<i8>, ...)>, linkage = #llvm.linkage<external>, sym_name = "printf"} : () -> ()
-  "func.func"() ({    
-    %0 = "llvm.mlir.addressof"() {global_name = @str0} : () -> !llvm.ptr<array<14 x i8>>
-    %1 = "llvm.getelementptr"(%0) {rawConstantIndices = array<i32: 0, 0>} : (!llvm.ptr<array<14 x i8>>) -> !llvm.ptr<i8>
-    "llvm.call"(%1) {"callee" = @printf} : (!llvm.ptr<i8>) -> (i32)
-    "func.return"() : () -> ()
-  }) {"sym_name" = "hello_world", "function_type" = () -> (), "sym_visibility" = "public"} : () -> ()
-}) : () -> ()
-```
-
-Compared to the previous IR, you can see that we have the addition of the _llvm.func_ operation at the top level of the module, the _Hello world!_ string has been extended with a new line and it is calling into _printf_ rather than _print_ now.
+You can see right at the end of the IR we have another _func_ operation, this time for the _printf_ function but without any body. We need this because _printf_ is an external function that will only be brought in at link time. Therefore this _func_ operation without a routine will define an external function, providing MLIR with the type signature information.
 
 ## Generating the executable and running
 
-The IR that we are generating from our tool is now is ready to be fed into LLVM and compiled. To do this you should create a file with the _.mlir_ ending, for instance _ex_one.mlir_ and into it copy the output from the above passes (redirecting stdio to the file is probably easiest). Next we execute:
+The IR that we are generating from our tool is now is ready to be fed into MLIR and compiled into an executable. To do this we will execute _./tinypy-opt output.xdsl -p tiny-py-to-standard -t mlir -o ex_one-mlir_ . You can see that this command is identical to the previous one apart from the _-o_ argument, which informs the tool to store the generated IR in a file rather than output to screen. Next we execute:
 
 ```bash
 user@login01:~$ mlir-opt --convert-func-to-llvm ex_one.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
 ```
 
-Here we are calling the _mlir-opt_ tool, part of the core LLVM distribution, to undertake some conversion of the standard dialects into the LLVM dialect, which is then fed into the _mlir-translate_ tool to generate LLVM-IR. This IR is then used as an input to Clang which builds the executable called _test_. If you are interested you can run the commands in isolation to see the different IRs that are generated from the commands.
+Here we are calling the _mlir-opt_ tool, which is part of MLIR, to undertake some conversion of the standard dialects into the LLVM dialect (here converting the _func_ dialect into its _llvm_ dialect counterpart), which is then fed into the _mlir-translate_ tool which generates LLVM-IR. This IR is then used as an input to Clang which builds the executable called _test_. If you are interested you can run the commands in isolation to see the different IRs that are generated from the commands. If you take a look in your directory you will see that there is now a new executable called _test_. 
 
-### Running on compute nodes
+### Running on ARCHER2
 
-Now we are good to go and it's time to run our executable on a compute nodes of ARCHER2. A submission script called _sub_ex1.srun_ is prepared and you will need to execute `sbatch sub_ex1.srun` at the command line. This will batch queue the job and, when a compute node is available, the executable will run and output stored in a file that you can be viewed.
+We can execute the _test_ executable direclty on the login node if we wish by:
+
+```bash
+user@login01:~$ ./test
+```
+
+But being a supercomputer it is also nice to run on the compute nodes too, and indeed we will be needing these in subsequent exercises. A submission script called _sub_ex1.srun_ is prepared that you can submit to the batch queue. 
+
+```bash
+user@login01:~$ sbatch sub_ex1.srun
+```
+
+You can check on the status of your job in the queue via _squeue -u $USER_ and once this has completed an output file will appear in your directly that contains the stdio output of the job. You can cat or less this file, which ever you prefer.
+
 
 ## Well done!
 
-Well done - you have got your first end to end code compiling and running on a supercomputer via xDSL and MLIR. In the next part of this practical we are going to enhance the dialects and transformations to extend the subset of Python that our tool supports
+Well done - you have got your first end to end code compiling and running on a supercomputer via xDSL and MLIR. In the next part of this practical we are going to enhance the dialects and transformations to extend the subset of Python that our tool supports to make things a bit more interesting and look at the different aspects in more depth.
