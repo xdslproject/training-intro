@@ -78,7 +78,7 @@ def translate_program(input_module: Module) -> ModuleOp:
 
     block.add_ops(global_declarations)
     body.add_block(block)
-    return ModuleOp.from_region_or_ops(body)
+    return ModuleOp(body)
 
 def translate_toplevel(ctx: SSAValueCtx, op: Operation, block) -> Operation:
     if isinstance(op, tiny_py.Function):

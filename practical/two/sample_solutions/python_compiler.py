@@ -24,7 +24,7 @@ def python_compile(func):
         # This next line wraps our IR in the built in Module operation, this
         # is required to comply with the MLIR standard (the top level must be
         # a built in module).
-        tiny_py_ir=ModuleOp.from_region_or_ops([tiny_py_ir])
+        tiny_py_ir=ModuleOp([tiny_py_ir])
 
         # Now we use the xDSL printer to output our built IR to stdio
         printer = Printer(stream=sys.stdout, target=Printer.Target.XDSL)
