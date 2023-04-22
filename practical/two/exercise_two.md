@@ -173,47 +173,76 @@ In [exercise one](https://github.com/xdslproject/training-intro/blob/main/practi
 
 If you open the _tiny_py_to_standard.py_ file which is in the _src_ folder at the top level of the practical directory, then you will see the activities being undertaken to lower our _tiny_py_ dialect down to the standard MLIR dialects. Whilst this isn't particularly complicated, there is a reasonable amount going on in order to lower the different aspects.
 
-Our objective is to transform the _Loop_ operation in our tiny py dialect into the _for_ operation of the standard _scf_ dialect, and if you look at line 173 of that file then you will see that we have started off the definition of this conversion. This function will first create an instance of the _BlockUpdatedVariables_ class (that we define at the start of that file) and take a copy of the SSA context. These are needed because we are about to go into a block, and standard MLIR dialects have no concept of variable storage. Instead, whenever a variable is updated then a new SSA context is created and this is refered to subsequently in the program. However blocks are a little different because their contents are private, so data is explicitly passed in as arguments and _yielded_ out of the block.
+Our objective is to transform the _Loop_ operation in our tiny py dialect into the _for_ operation of the standard _scf_ dialect, and if you look at line 173 of the [tiny_py_to_standard.py](https://github.com/xdslproject/training-intro/blob/main/practical/src/tiny_py_to_standard.py) file then you will see that we have started off the definition of this conversion. This function is below, with the comment _Needs to be completed!_ highlighting the parts that are missing and you need to add:
 
 ```python
-def translate_loop(ctx: SSAValueCtx, block_description: BlockUpdatedVariables,
-                  loop_stmt: tiny_py.Loop) -> List[Operation]:
-    
-    block_description=BlockUpdatedVariables()
-    
-    prev_ctx=ctx.copy()
+def translate_loop(ctx: SSAValueCtx,
+                  loop_stmt: tiny_py.Loop) -> List[Operation]:    
+
+    # First off lets translate the from (start) and to (end) expressions of the loop
+    start_expr, start_ssa=translate_expr(ctx, loop_stmt.from_expr.blocks[0].ops[0])
+    end_expr, end_ssa=None, None # Needs to be completed!
+    # The scf.for operation requires indexes as the type, so we cast these to
+    # the indextype using the IndexCastOp of the arith dialect
+    start_cast = arith.IndexCastOp.get(start_ssa, IndexType())
+    end_cast = None # Needs to be completed!
+    # The scf.for operation requires a step (number of iterations to increment
+    # each iteration, we just create this as 1)
+    step_op = arith.Constant.create(attributes={"value": IntegerAttr.from_index_int_value(1)}, result_types=[IndexType()])
+
+    # This is slightly more complex, we need to provide as arguments to the block
+    # variables which are updated and then yield these out. We use a visitor
+    # to visit all assignments and gather the names of the variables that are assigned
+    assigned_var_finder=GetAssignedVariables()
+    for op in loop_stmt.body.blocks[0].ops:
+        assigned_var_finder.traverse(op)
+
+    # Based on the above information we build the list of block arguments, the first
+    # element is always the operand which represents the current loop iteration
+    # which is of type index
+    block_arg_types=[IndexType()]
+    block_args=[]
+    for var_name in assigned_var_finder.assigned_vars:
+        block_arg_types.append(ctx[StringAttr(var_name)].typ)
+        block_args.append(ctx[StringAttr(var_name)])
+
+    # Create the block with our arguments, we will be putting into here the
+    # operations that are part of the loop body
+    block = Block(arg_types=block_arg_types)
+
+    # In the SSA context that is passed into the translation of the loop
+    # body we set each assigned variable to reference the corresponding argument
+    # to the block
+    c = SSAValueCtx(dictionary=dict(), parent_scope=ctx)
+    for idx, var_name in enumerate(assigned_var_finder.assigned_vars):
+      c[StringAttr(var_name)]=block.args[idx+1]
+
+    # Now lets visit each operation in the loop body and build up the operations
+    # which will be added to the block
     ops: List[Operation] = []
     for op in loop_stmt.body.blocks[0].ops:
-        pass
+        pass # Needs to be completed!        
 
-    start_expr, start_ssa=translate_expr(ctx, block_description, loop_stmt.from_expr.blocks[0].ops[0])
-    ctx[loop_stmt.variable]=start_ssa
-
-    block_arg_types=[i32]
-    block_args=[ctx[loop_stmt.variable]]
-    for var_name in block_description.get():
-        block_arg_types.append(ctx[var_name].typ)
-        block_args.append(prev_ctx[var_name])
-
-    block = Block()
-    
+    # We need to yield out assigned variables at the end of the block
+    yield_stmt=generate_yield(c, assigned_var_finder.assigned_vars)
+    block.add_ops(ops+[yield_stmt])
     body=Region()
     body.add_block(block)
 
-    loop_increment=arith.Constant.from_int_and_width(1, 32)
-    loop_variable_inc=arith.Addi.get(ctx[loop_stmt.variable], loop_increment.results[0])
+    # Build the for loop operation here
+    for_loop=None # Needs to be completed!
 
-    block_after = Block.from_arg_types(block_arg_types)
-    
-    yield_stmt=generate_yield(ctx, block_description, loop_variable_inc)
-    
-    body_after=Region()
-    body_after.add_block(block_after)
+    # From now on, whenever the code references any variable that was assigned
+    # in the body of the loop we need to use the corresponding loop result
+    for i, var_name in enumerate(assigned_var_finder.assigned_vars):
+      ctx[StringAttr(var_name)]=for_loop.results[i]
 
-    block_updated=None
-
-    return start_expr+[scf.While.get([block_args], [[i32]], body, body_after)]
+    return start_expr+end_expr+[start_cast, end_cast, step_op, for_loop]
 ```
+
+There is quite a bit going on here, so let's first complete the missing parts and then we will explore what the other aspects are doing too. You can see at line 181 of this file the line `end_expr, end_ssa=None, None # Needs to be completed!`. This is for handling the upper loop bounds which is an expression, and we need to call the corresponding function to convert this from the tiny py dialect into the standard dialects. You can see from the line above how this is handled for start, or from, expression, and here we can do very similar for this end expression using `loop_stmt.to_expr.blocks[0].ops[0]` as the second argument to the `translate_expr` call. This `translate_expr` call returns two things, firstly the operations that the _to_ expression corresponds to, and secondly the resulting SSA value that can be used by subsequent operations to reference this.
+
+Based upon how we have expressed this, the _start_ssa_ and _end_ssa_ values are of type integer, and the _for_ operation of the _scf_ dialect requires the lower and upper loop bound operands to be of type _index_ . Therefore we need to issue an operation that converts from an _integer_ to and _index_. If you look at line 185 of the file (line 10 of the snippet above) you will see the line `end_cast = None # Needs to be completed!` . The line above issues this conversion for _start_ssa_, so by following what was done there you should issue the same conversion operation for _end_ssa_.
 
 In the code above you can see that we create the _ops_ list, which is currently empty and we need to complete the subsequent loop. To do this you call the _translate_stmt_ function with the SSA context _ctx_, _block_description_ member and _op_ operation. The result is then added to the _ops_ list (e.g. via _ops.append_). 
 
