@@ -136,4 +136,4 @@ You can check on the status of your job in the queue via _squeue -u $USER_ and o
 
 ## Well done!
 
-Well done - you have got your first end to end code compiling and running on a supercomputer via xDSL and MLIR. In the next part of this practical we are going to enhance the dialects and transformations to extend the subset of Python that our tool supports to make things a bit more interesting and look at the different aspects in more depth.
+Well done - you have got your first end to end code compiling and running on a supercomputer via xDSL and MLIR. In the [next exercise](https://github.com/xdslproject/training-intro/edit/main/practical/two) we are going to enhance the dialects and transformations to extend the subset of Python that our tool supports to make things a bit more interesting and look at the different aspects in more depth.
