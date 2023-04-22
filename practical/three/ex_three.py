@@ -6,5 +6,6 @@ def ex_three():
     add_val=88.2
     for a in range(0, 100000):
       val=val+add_val
+    print(val)
 
 ex_three()
