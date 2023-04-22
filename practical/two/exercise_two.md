@@ -248,7 +248,13 @@ In the code above you can see that we create the _ops_ list (line 219 of [tiny_p
 
 Now we have done all of this we just need to create the _for_ operation in the _scf_ dialect, this missing code is towards the end of the snippet above (`for_loop=None # Needs to be completed!`) and at line 231 of [tiny_py_to_standard.py](https://github.com/xdslproject/training-intro/blob/main/practical/src/tiny_py_to_standard.py). To create the operation we will call the _get_ method of the _for_ operations, i.e. `scf.For.get(..)` and provide to this operation five arguments. These arguments are the SSA result of the _start_cast_ operation, the SSA result of the _end_cast_ operation, the SSA result of the _step_op_ operation (which defines the step increment each iteration), _block_args_ (which we will describe in a moment), and _body_ which is a list of operations comprising the body of the loop. _block_args_ and _body_ can be passed directly as arguments 4 and 5, whereas for the other arguments we need to look up the SSA value from the operation which is avilable in the `results` member. For instance, for _start_cast_ you would pass `_start_cast.results[0]`.
 
-We have completed the missing parts and are now ready to run the translation pass, ``tinypy-opt output.xdsl -p tiny-py-to-standard -t mlir`` and output MLIR formatted IR. You should see the following generated, where you can see the for loop from the scf dialect which contains the loop bounds and body.
+We have completed the missing parts and are now ready to run the translation pass and output MLIR formatted IR:
+
+```bash
+user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard -t mlir
+```
+
+You should see the following generated, where you can see the for loop from the scf dialect which contains the loop bounds and body.
 
 ```
 "builtin.module"() ({
@@ -293,16 +299,38 @@ We have skipped over some of the details in this function that are worth highlig
     }) : (index, index, index, f32) -> f32
 ```
 
-Here we have the _for_ operation, with the lower bound, upper bound, and step passes as arguments. But furthermore, you can see _%0_ is also passed as an argument and this is the initial value of _val_ that we will be incrementing. The line below, `^0(%8 : index, %9 : f32):` defines a block with arguments provided to the block. With a _for_ operation, the first argument to it's body's block is the loop index (_%8_) and the second argument onwards are SSA values that are inputs to the block. At the end of this block you can see the _yield_ operation, with _%10_, the result of the floating point addition, as an argument. Effectively, this will set _%10_ to be the result of a single execution of the block, and on the next iteration of the loop the block argument (_%9%_) will refer to this value rather than the initial value of _%0_ that was provided. After the last iteration of the _for_ operation, this yielded value is set as the result odf the entire _for_ operation as _%7_. Zero, one or more SSA values can be yielded from a block.
+Here we have the _for_ operation, with the lower bound, upper bound, and step passes as arguments. But furthermore, you can see _%0_ is also passed as an argument and this is the initial value of _val_ that we will be incrementing. The line below, `^0(%8 : index, %9 : f32):` defines a block with arguments provided to the block. With a _for_ operation, the first argument to it's body's block is the loop index (_%8_) and the second argument onwards are SSA values that are inputs to the block. At the end of this block you can see the _yield_ operation, with _%10_, the result of the floating point addition, as an argument. Effectively, this will set _%10_ to be the result of a single execution of the block, and on the next iteration of the loop the block argument (_%9%_) will refer to this value rather than the initial value of _%0_ that was provided. After the last iteration of the _for_ operation, this yielded value is set as the result of the entire _for_ operation as _%7_. Zero, one or more SSA values can be yielded from a block.
 
 The challenge is knowing which SSA values need to be included in the block as arguments, which need to be yielded, and then later on in the IR (e.g. when calling the _printf_ function) using the SSA value resulting from the loop rather than the initial SSA value. This is what the other parts of the _translate_loop_ function are doing, where we have written a simple _GetAssignedVariables_ visitor (which can be seen at line 32 of [tiny_py_to_standard.py](https://github.com/xdslproject/training-intro/blob/main/practical/src/tiny_py_to_standard.py)) which will visit all assignments to track which variables are updated. These are then used as the block and yield operation arguments.
 
 ## Compile and run
 
-We are now ready to feed this into LLVM and compile the code, similarly to exercise one you should create a file with the _.mlir_ ending, for instance _ex_two.mlir_ and into it copy the output from the above passes (redirecting stdio to the file is probably easiest). The execute the following (you can see we provide _-convert-std-to-llvm_ as an argument to _mlir_opt_ which converts all standard dialects to the LLVM dialect):
+We are now ready to feed this into `mlir-opt` and generate LLVM IR to pass to Clang to build out executable. Similarly to exercise one you should create a file with the _.mlir_ ending, via 
 
 ```bash
-user@login01:~$ mlir-opt --pass-pipeline="builtin.module(loop-invariant-code-motion, convert-scf-to-cf, convert-cf-to-llvm{index-bitwidth=64}, convert-arith-to-llvm{index-bitwidth=64}, convert-func-to-llvm, reconcile-unrealized-casts)" ex2.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
+user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard -t mlir -o ex_two.mlir
 ```
 
-A submission script called _sub_ex2.srun_ is prepared and you will need to execute `sbatch sub_ex2.srun` at the command line. This will batch queue the job and, when a compute node is available, the executable will run and output stored in a file that you can be viewed.
+Then execute the following:
+
+```bash
+user@login01:~$ mlir-opt --pass-pipeline="builtin.module(loop-invariant-code-motion, convert-scf-to-cf, convert-cf-to-llvm{index-bitwidth=64}, convert-arith-to-llvm{index-bitwidth=64}, convert-func-to-llvm)" ex_two.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
+```
+
+This is quite a bit more complex than the arguments to `mlir-opt` that were used in practical one, and that's because we have more dialects that we are lowering to the LLVM MLIR dialect. Furthermore, we are applying the _loop-invariant-code-motion_ optimisation pass which moves statements outside of the loop where possible and _reconcile-unrealized-casts_ which instructs MLIR to put in explicit operations for undertaking implicit data conversion. 
+
+Similarly to exercise one, you can either run this on the login node (or local machine), or submit to the batch queue for execution on a compute node.
+
+We can execute the _test_ executable direclty on the login node if we wish by (or if you are following the tutorial on your local machine):
+
+```bash
+user@login01:~$ ./test
+```
+
+A submission script called _sub_ex2.srun_ is prepared that you can submit to the batch queue. 
+
+```bash
+user@login01:~$ sbatch sub_ex1.srun
+```
+
+You can check on the status of your job in the queue via _squeue -u $USER_ and once this has completed an output file will appear in your directly that contains the stdio output of the job. You can cat or less this file, which ever you prefer.
