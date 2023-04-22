@@ -278,11 +278,24 @@ We have completed the missing parts and are now ready to run the translation pas
 }) : () -> ()
 ```
 
+>**Not sure or having problems?**
+> Please feel free to ask if there is anything you are unsure about, or you can check the [sample solution](https://github.com/xdslproject/training-intro/blob/main/practical/two/sample_solutions/tiny_py_to_standard.py)
+
 ### Exploring the function in more detail
 
-It can also be seen how we are creating this other block, _block_after_, with accepts a number of input arguments (the inputs to the block) based upon the body of the loop that has been translated and the _yield_stmt_ operation which contains the corresponding SSA contexts for these to make any updates visible outside the block. Just after this yield statement, before we construct the region, we need to add the operations to this block. This is similar to how we did it for the _before_ block, so we can use the _add_ops_ function on the _block_after_ variable, and we want to add the _ops_, _loop_increment_, _loop_variable_inc_ and _yield_stmt_ operations. Note that a list needs to be provided, one or more of these is already a list whereas others are individual operations (so as before you will need to wrap some in a list).
+We have skipped over some of the details in this function that are worth highlighting. In a loop, or any region that is being iterated upon, values will likely change from one iteration to the next. Therefore we need to define which values are updated and ensure that these are being used per iteration. Therefore blocks can have arguments and the following snippet, taken from the IR above illustrates this.
 
-Once you have done this then the last thing to do is to make our translation pass call into the _translate_loop_ function whenever it encounters the _Loop_ operation in the _tiny_py_ dialect. If you go to the _try_translate_stmt_ function (line 135), you can see how we do this for other statements. You will need to add an extra condition checking whether _op_ is an instance of the _tiny_py.Loop_ class, and if so returning the results from calling _translate_loop_ with the same arguments as the other calls in that function.
+```
+%7 = "scf.for"(%4, %5, %6, %0) ({
+    ^0(%8 : index, %9 : f32):
+      %10 = "arith.addf"(%9, %1) : (f32, f32) -> f32
+      "scf.yield"(%10) : (f32) -> ()
+    }) : (index, index, index, f32) -> f32
+```
+
+Here we have the _for_ operation, with the lower bound, upper bound, and step passes as arguments. But furthermore, you can see _%0_ is also passed as an argument and this is the initial value of _val_ that we will be incrementing. The line below, `^0(%8 : index, %9 : f32):` defines a block with arguments provided to the block. With a _for_ operation, the first argument to it's body's block is the loop index (_%8_) and the second argument onwards are SSA values that are inputs to the block. At the end of this block you can see the _yield_ operation, with _%10_, the result of the floating point addition, as an argument. Effectively, this will set _%10_ to be the result of a single execution of the block, and on the next iteration of the loop the block argument (_%9%_) will refer to this value rather than the initial value of _%0_ that was provided. After the last iteration of the _for_ operation, this yielded value is set as the result odf the entire _for_ operation as _%7_. Zero, one or more SSA values can be yielded from a block.
+
+The challenge is knowing which SSA values need to be included in the block as arguments, which need to be yielded, and then later on in the IR (e.g. when calling the _printf_ function) using the SSA value resulting from the loop rather than the initial SSA value. This is what the other parts of the _translate_loop_ function are doing, where we have written a simple _GetAssignedVariables_ visitor (which can be seen at line 32 of [tiny_py_to_standard.py](https://github.com/xdslproject/training-intro/blob/main/practical/src/tiny_py_to_standard.py)) which will visit all assignments to track which variables are updated. These are then used as the block and yield operation arguments.
 
 ## Compile and run
 
