@@ -178,11 +178,11 @@ def translate_loop(ctx: SSAValueCtx,
 
     # First off lets translate the from (start) and to (end) expressions of the loop
     start_expr, start_ssa=translate_expr(ctx, loop_stmt.from_expr.blocks[0].ops[0])
-    end_expr, end_ssa=translate_expr(ctx, loop_stmt.to_expr.blocks[0].ops[0])
+    end_expr, end_ssa=None, None # Needs to be completed!
     # The scf.for operation requires indexes as the type, so we cast these to
     # the indextype using the IndexCastOp of the arith dialect
     start_cast = arith.IndexCastOp.get(start_ssa, IndexType())
-    end_cast = arith.IndexCastOp.get(end_ssa, IndexType())
+    end_cast = None # Needs to be completed!
     # The scf.for operation requires a step (number of iterations to increment
     # each iteration, we just create this as 1)
     step_op = arith.Constant.create(attributes={"value": IntegerAttr.from_index_int_value(1)}, result_types=[IndexType()])
@@ -218,8 +218,7 @@ def translate_loop(ctx: SSAValueCtx,
     # which will be added to the block
     ops: List[Operation] = []
     for op in loop_stmt.body.blocks[0].ops:
-        stmt_ops = translate_stmt(c, op)
-        ops += stmt_ops
+        pass # Needs to be completed!
 
     # We need to yield out assigned variables at the end of the block
     yield_stmt=generate_yield(c, assigned_var_finder.assigned_vars)
@@ -228,7 +227,7 @@ def translate_loop(ctx: SSAValueCtx,
     body.add_block(block)
 
     # Build the for loop operation here
-    for_loop=scf.For.get(start_cast.results[0], end_cast.results[0], step_op.results[0], block_args, body)
+    for_loop=None # Needs to be completed!
 
     # From now on, whenever the code references any variable that was assigned
     # in the body of the loop we need to use the corresponding loop result
