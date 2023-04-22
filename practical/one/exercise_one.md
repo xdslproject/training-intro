@@ -18,6 +18,12 @@ Details about how to access your account on ARCHER2 and set up the environment t
 
 Irrespective of the machine you are using, it is assumed that you have a command line terminal in the _training-intro/practical/one_ directory.
 
+## The structure of the practical content
+
+If you look in the [practical](https://github.com/xdslproject/training-intro/edit/main/practical) directory you will see a number of sub-folders. [one](https://github.com/xdslproject/training-intro/edit/main/practical/one), [two](https://github.com/xdslproject/training-intro/edit/main/practical/two) and [three](https://github.com/xdslproject/training-intro/edit/main/practical/three) correspond to the three practical exercises with [general](https://github.com/xdslproject/training-intro/edit/main/practical/general) containing general instructions that are linked from the practicals. The [src](https://github.com/xdslproject/training-intro/edit/main/practical/src) directory contains code to drive our Python compiler and transformations, and [src/dialect](https://github.com/xdslproject/training-intro/edit/main/practical/src/dialects) contains the tiny py dialect that we will be using here.
+
+Practicals two and three will require you to edit the source code files in the [src](https://github.com/xdslproject/training-intro/edit/main/practical/src) directory.
+
 ## First steps
 
 Once you have changed to your work directory, now _cd_ into the _training-intro/practical/one_ directory that should be visible. In this you will see the _code.py_ file which we are going to work with in this exercise. This is a simple, contrived, Python example but is useful to illustrate the central concepts behind MLIR and xDSL. Our objective is to write a Python compiler which enables programmers to decorate functions and for these to then be compiled and executed natively. 
