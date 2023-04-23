@@ -41,7 +41,7 @@ Of course, one way of leveraging the _parallel_ operation would be to edit our _
 
 If you take a look in [tinypy-opt](https://github.com/xdslproject/training-intro/blob/main/practical/src/tools/tinypy-opt) tool (which is in _src/tools_ from the _practical_ directory) you will see at line 17 the _register_all_passes_ function which is registering possible transformations that can be performed on the IR. The second of these, _ConvertForToParallel_ is the transformation that we will be working with in this exercise and have already started off for you.
 
-This transformation can be found in (src/for_to_parallel.py)[https://github.com/xdslproject/training-intro/blob/main/practical/src/for_to_parallel.py] and the transformation entry point is defined at the bottom of the file by the class _ConvertForToParallel_, where the _name_ field defines the name of the transformation as provided to _tinypy_opt_.
+This transformation can be found in [src/for_to_parallel.py](https://github.com/xdslproject/training-intro/blob/main/practical/src/for_to_parallel.py) and the transformation entry point is defined at the bottom of the file by the class _ConvertForToParallel_, where the _name_ field defines the name of the transformation as provided to _tinypy_opt_.
 
 
 ```python
@@ -96,7 +96,7 @@ If we look at the first line, `"%7 =scf.parallel"(%4, %5, %6, %0)` in the above 
 
 ## Developing the rewrite pass
 
-We now need to develop the rewrite pass to convert the _for_ operation to a _parallel_ operation and extract out the values being updated each iteration and wrap these in a _reduce_ operation. We have started this for you in the _ApplyForToParallelRewriter_ class of the (src/for_to_parallel.py)[https://github.com/xdslproject/training-intro/blob/main/practical/src/for_to_parallel.py] file.
+We now need to develop the rewrite pass to convert the _for_ operation to a _parallel_ operation and extract out the values being updated each iteration and wrap these in a _reduce_ operation. We have started this for you in the _ApplyForToParallelRewriter_ class of the [src/for_to_parallel.py](https://github.com/xdslproject/training-intro/blob/main/practical/src/for_to_parallel.py) file.
 
 
 ```python
@@ -176,7 +176,7 @@ class ApplyForToParallelRewriter(RewritePattern):
         parallel_loop=None # Needs to be completed!         
 ```
 
-If we look at line 55 of (src/for_to_parallel.py)[https://github.com/xdslproject/training-intro/blob/main/practical/src/for_to_parallel.py], which is `block_arg_types=[] # Needs to be completed!`, we need to provide the two types of the left and right hand sides as arguments to the block. These are _block_arg_op.typ_ and _other_arg.typ_ respectively, and each should be a member of the list (with a comma separating them).
+If we look at line 55 of [src/for_to_parallel.py](https://github.com/xdslproject/training-intro/blob/main/practical/src/for_to_parallel.py), which is `block_arg_types=[] # Needs to be completed!`, we need to provide the two types of the left and right hand sides as arguments to the block. These are _block_arg_op.typ_ and _other_arg.typ_ respectively, and each should be a member of the list (with a comma separating them).
 
 At line 65, which is `reduce_result=None # Needs to be completed!` we need to create the _reduce.return_ operation which will return the result of the calculation's operation. We can create this by calling the _get_ method on _scf.ReduceReturnOp_, with _new_op.results[0]_ as the argument (this provides the SSA result of the _new_op_ operation that we created at the line above. 
 
