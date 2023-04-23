@@ -10,4 +10,4 @@ These are the practical exercises for the xDSL introduction tutorial, where we h
 
 Details about how to access your account on ARCHER2 and set up the environment that we will need for these practicals can be found on the [ARCHER2 setup instructions](https://github.com/xdslproject/training-intro/blob/main/practical/general/ARCHER2.md) page. If you are undertaking these tutorials locally then you can view the [local setup instructions](https://github.com/xdslproject/training-intro/blob/main/practical/general/local.md).
 
-Before doing these tutorials you should issue `source environment.sh` in this directory which will set up your environment paths
+Before doing these exercises you should issue `source environment.sh` in this directory which will set up your environment paths
