@@ -12,6 +12,8 @@ Learning objectives are:
 
 Sample solutions to this exercise are provided in [sample_solutions](sample_solutions) in-case you get stuck or just want to compare your efforts with ours.
 
+It is assumed that you have a command line terminal in the _training-intro/practical/three_ directory.
+
 >**Having problems?**  
 > As you go through this exercise if there is anything you are unsure about or are stuck on then please do not hesitate to ask one of the tutorial demonstrators and we will be happy to assist!
 
@@ -282,6 +284,8 @@ user@login01:~$ sbatch sub_ex3.srun
 ```
 
 You can check on the status of your job in the queue via _squeue -u $USER_ and once this has completed an output file will appear in your directly that contains the stdio output of the job. You can cat or less this file, which ever you prefer.
+
+In the submission file we have added the _time_ command which reports how long the executable took to run, and indeed if running this locally you can achieve this via `time ./test`. Experiment with running over different numbers of OpenMP threads, via the `OMP_NUM_THREADS` environment variable (which you will see is set to 128 in the _sub_ex3.srun_ and can be changed). How does this impact the runtime? You can also change the problem size (e.g. the number of loop iterations) by modifying the value in the origional _ex_three.py_ Python file and then regenerating and recompiling.
 
 ### Adding vectorisation
 
