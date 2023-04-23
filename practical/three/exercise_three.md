@@ -98,7 +98,6 @@ If we look at the first line, `"%7 =scf.parallel"(%4, %5, %6, %0)` in the above 
 
 We now need to develop the rewrite pass to convert the _for_ operation to a _parallel_ operation and extract out the values being updated each iteration and wrap these in a _reduce_ operation. We have started this for you in the _ApplyForToParallelRewriter_ class of the [src/for_to_parallel.py](https://github.com/xdslproject/training-intro/blob/main/practical/src/for_to_parallel.py) file.
 
-
 ```python
 class ApplyForToParallelRewriter(RewritePattern):
 
@@ -175,6 +174,8 @@ class ApplyForToParallelRewriter(RewritePattern):
         # Create our parallel operation and replace the for loop with this
         parallel_loop=None # Needs to be completed!         
 ```
+
+The method _match_and_rewrite_ defined as `def match_and_rewrite(self, for_loop: scf.For, rewriter: PatternRewriter)` will be called whenever the IR walker encounters a node which is of type _scf.For_. This is the argument _for_loop_ to the method, which we can then manipulate as required by the transformation
 
 If we look at line 55 of [src/for_to_parallel.py](https://github.com/xdslproject/training-intro/blob/main/practical/src/for_to_parallel.py), which is `block_arg_types=[] # Needs to be completed!`, we need to provide the two types of the left and right hand sides as arguments to the block. These are _block_arg_op.typ_ and _other_arg.typ_ respectively, and each should be a member of the list (with a comma separating them).
 
