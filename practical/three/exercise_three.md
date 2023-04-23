@@ -297,7 +297,7 @@ The executable is then run in the same manner as with OpenMP
 We don't have GPUs in ARHCER2, so their use is beyond the scope of this course, but if you have a GPU machine then you can transform your parallel loop into the _gpu_ dialect via the following
 
 ```bash
-user@login01:~$ mlir-opt --pass-pipeline="builtin.module(scf-parallel-loop-tiling{parallel-loop-tile-sizes=1024,1,1}, canonicalize, func.func(gpu-map-parallel-loops), convert-parallel-loops-to-gpu, lower-affine, gpu-kernel-outlining,func.func(gpu-async-region),canonicalize,convert-arith-to-llvm{index-bitwidth=64},convert-scf-to-cf,convert-cf-to-llvm{index-bitwidth=64},gpu.module(convert-gpu-to-nvvm,reconcile-unrealized-casts,canonicalize,gpu-to-cubin),gpu-to-llvm,canonicalize)" | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
+user@login01:~$ mlir-opt --pass-pipeline="builtin.module(scf-parallel-loop-tiling{parallel-loop-tile-sizes=1024,1,1}, canonicalize, func.func(gpu-map-parallel-loops), convert-parallel-loops-to-gpu, lower-affine, gpu-kernel-outlining,func.func(gpu-async-region),canonicalize,convert-arith-to-llvm{index-bitwidth=64},convert-scf-to-cf,convert-cf-to-llvm{index-bitwidth=64},gpu.module(convert-gpu-to-nvvm,reconcile-unrealized-casts,canonicalize,gpu-to-cubin),gpu-to-llvm,canonicalize)" ex-three.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
 ```
 
 >**Note**
