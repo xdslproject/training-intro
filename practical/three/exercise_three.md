@@ -204,3 +204,101 @@ There are some things worth highlighting in the IR and rewrite pass that we have
 ```
 
 You can see in the above IR that we have _operand_segment_sizes_ provided as an argument to the operation. This is required for _varadic_ operands, which are operands which can have any size. Here the attribute is informing the operation that it is two lower bound operands, two upper bound operands, and two step operands but no SSA value arguments to be passed in.
+
+### Running our transformation pass
+
+Now we have developed our pass, let's run it through `tinypy-opt` as per the following snippet. Note that here we are undertaking two transformations, first our previous _tiny-py-to-standard_ lowering and then the _for-to-parallel_ which because it comes second operates on the results of the first transformation.
+
+```bash
+user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard,for-to-parallel -t mlir
+```
+
+The following is the IR outputted from these two transformations, you can see the _parallel_, _reduce_, and _reduce.return_ operations that we have added into our transformation in this section. The rest of the IR is the same as that generated in exercise two, and that is a major benefit of using _parallel_ because we can parallelise a loop without requiring extensive IR changes elsewhere.
+
+```
+"builtin.module"() ({
+  "func.func"() ({
+    %0 = "arith.constant"() {"value" = 0.0 : f32} : () -> f32
+    %1 = "arith.constant"() {"value" = 88.2 : f32} : () -> f32
+    %2 = "arith.constant"() {"value" = 0 : i32} : () -> i32
+    %3 = "arith.constant"() {"value" = 100000 : i32} : () -> i32
+    %4 = "arith.index_cast"(%2) : (i32) -> index
+    %5 = "arith.index_cast"(%3) : (i32) -> index
+    %6 = "arith.constant"() {"value" = 1 : index} : () -> index
+    %7 = "scf.parallel"(%4, %5, %6, %0) ({
+    ^0(%8 : index):
+      "scf.reduce"(%1) ({
+      ^1(%9 : f32, %10 : f32):
+        %11 = "arith.addf"(%9, %10) : (f32, f32) -> f32
+        "scf.reduce.return"(%11) : (f32) -> ()
+      }) : (f32) -> ()
+      "scf.yield"() : () -> ()
+    }) {"operand_segment_sizes" = array<i32: 1, 1, 1, 1>} : (index, index, index, f32) -> f32
+    %12 = "llvm.mlir.addressof"() {"global_name" = @str0} : () -> !llvm.ptr<!llvm.array<3 x i8>>
+    %13 = "llvm.getelementptr"(%12) {"rawConstantIndices" = array<i32: 0, 0>} : (!llvm.ptr<!llvm.array<3 x i8>>) -> !llvm.ptr<i8>
+    %14 = "arith.extf"(%7) : (f32) -> f64
+    "func.call"(%13, %14) {"callee" = @printf} : (!llvm.ptr<i8>, f64) -> ()
+    "func.return"() : () -> ()
+  }) {"sym_name" = "main", "function_type" = () -> (), "sym_visibility" = "public"} : () -> ()
+  "llvm.mlir.global"() ({
+  }) {"global_type" = !llvm.array<3 x i8>, "sym_name" = "str0", "linkage" = #llvm.linkage<"internal">, "addr_space" = 0 : i32, "constant", "value" = "%f\n", "unnamed_addr" = 0 : i64} : () -> ()
+  "func.func"() ({
+  }) {"sym_name" = "printf", "function_type" = (!llvm.ptr<i8>, f64) -> (), "sym_visibility" = "private"} : () -> ()
+}) : () -> ()
+```
+
+## Compile and run
+
+We are now ready to feed this into `mlir-opt` and generate LLVM IR to pass to Clang to build out executable. Similarly to exercise one you should create a file with the _.mlir_ ending, via 
+
+```bash
+user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard,for-to-parallel -t mlir -o ex_three.mlir
+```
+
+### Threaded parallelism via OpenMP
+
+Execute the following:
+
+```bash
+user@login01:~$ mlir-opt --pass-pipeline="builtin.module(loop-invariant-code-motion, convert-scf-to-openmp, convert-scf-to-cf, convert-cf-to-llvm{index-bitwidth=64}, convert-arith-to-llvm{index-bitwidth=64}, convert-openmp-to-llvm, convert-func-to-llvm, reconcile-unrealized-casts)" ex-three.mlir | mlir-translate -mlir-to-llvmir | clang -fopenmp -x ir -o test -
+```
+
+This is similar to the _mlir-opt_ command that we issued in exercice two, but with a few additions. Firstly, _convert-scf-to-openmp_ will run the MLIR transformation to lower our parallel loop to the _omp_ dialect, and secondly _convert-openmp-to-llvm_ will then lower this to the _llvm_ dialect. Furthermore you can see that we have had to pass the _-fopenmp_ flag to clang as we must now link with the OpenMP runtime.
+
+You can either run this on the login node (or local machine), or submit to the batch queue for execution on a compute node.
+
+We can execute the _test_ executable direclty on the login node if we wish by (or if you are following the tutorial on your local machine):
+
+```bash
+user@login01:~$ export OMP_NUM_THREADS=8
+user@login01:~$ ./test
+```
+
+A submission script called _sub_ex3.srun_ is prepared that you can submit to the batch queue and will run over all 128 cores of the node.
+
+```bash
+user@login01:~$ sbatch sub_ex3.srun
+```
+
+You can check on the status of your job in the queue via _squeue -u $USER_ and once this has completed an output file will appear in your directly that contains the stdio output of the job. You can cat or less this file, which ever you prefer.
+
+### Adding vectorisation
+
+We can use the _scf-parallel-loop-specialization_ pass to apply vectorisation to our parallel loop, in order to do this (we do this instead of OpenMP, but the two can be mixed):
+
+```bash
+user@login01:~$ mlir-opt --pass-pipeline="builtin.module(loop-invariant-code-motion, scf-parallel-loop-specialization, convert-scf-to-cf, convert-cf-to-llvm{index-bitwidth=64}, convert-arith-to-llvm{index-bitwidth=64}, convert-func-to-llvm, reconcile-unrealized-casts)" ex-three.mlir | mlir-translate -mlir-to-llvmir | clang -fopenmp -x ir -o test -
+```
+
+The executable is then run in the same manner as with OpenMP
+
+### Running on a GPU
+
+We don't have GPUs in ARHCER2, so their use is beyond the scope of this course, but if you have a GPU machine then you can transform your parallel loop into the _gpu_ dialect via the following
+
+```bash
+user@login01:~$ mlir-opt --pass-pipeline="builtin.module(scf-parallel-loop-tiling{parallel-loop-tile-sizes=1024,1,1}, canonicalize, func.func(gpu-map-parallel-loops), convert-parallel-loops-to-gpu, lower-affine, gpu-kernel-outlining,func.func(gpu-async-region),canonicalize,convert-arith-to-llvm{index-bitwidth=64},convert-scf-to-cf,convert-cf-to-llvm{index-bitwidth=64},gpu.module(convert-gpu-to-nvvm,reconcile-unrealized-casts,canonicalize,gpu-to-cubin),gpu-to-llvm,canonicalize)" | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
+```
+
+>**Note**
+> Your LLVM must have been built with explicit support for GPUs via passing the `-DLLVM_TARGETS_TO_BUILD="X86;NVPTX"` flag to cmake
