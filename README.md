@@ -19,9 +19,9 @@ Based upon a morning tutorial at SC
 | 9:25 - 10:00 | [Logging into ARCHER](https://github.com/xdslproject/training-intro/blob/main/practical/general/ARCHER2.md) and hands on activity ([ex1](https://github.com/xdslproject/training-intro/tree/main/practical/one),[ex2](https://github.com/xdslproject/training-intro/tree/main/practical/two),[ex3](https://github.com/xdslproject/training-intro/tree/main/practical/three)) |
 | 10:00 - 10:30 | Morning break |
 | 10:30 - 10:35 | Welcome back and overview of the second part |
-| 10:35 - 11:45 | Hands on practical activity      |
-| 11:45 - 11:55 | Wash up of practical activities      |
-| 11:55 - 12:00 | Conclusions and next steps      |
+| 10:35 - 11:45 | Hands on practical activity ([ex1](https://github.com/xdslproject/training-intro/tree/main/practical/one),[ex2](https://github.com/xdslproject/training-intro/tree/main/practical/two),[ex3](https://github.com/xdslproject/training-intro/tree/main/practical/three))|
+| 11:45 - 11:55 | Wash up of practical activities |
+| 11:55 - 12:00 | Conclusions and next steps |
 
 ## Working on your own?
 
