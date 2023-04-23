@@ -5,7 +5,7 @@
 #SBATCH --time=0:5:0
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=128
 
 #SBATCH --partition=standard
 #SBATCH --qos=standard
@@ -13,7 +13,8 @@
 # Set the number of threads to 1
 #   This prevents any threaded system libraries from automatically 
 #   using threading.
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=128
+export OMP_PLACES=cores
 
 # Launch the job
-srun --distribution=block:block --hint=nomultithread ./test
+srun --distribution=block:block --hint=nomultithread time ./test
