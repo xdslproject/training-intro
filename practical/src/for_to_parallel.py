@@ -52,7 +52,7 @@ class ApplyForToParallelRewriter(RewritePattern):
 
             # Create a new block for this reduction operation which has the type of
             # operation LHS and RHS present
-            block_arg_types=[block_arg_op.typ, other_arg.typ]
+            block_arg_types=[] # Needs to be completed!
             block = Block(arg_types=block_arg_types)
 
             # Retrieve the dialect operation to instantiate
@@ -62,11 +62,11 @@ class ApplyForToParallelRewriter(RewritePattern):
             # Instantiate the dialect operation and create a reduce return operation
             # that will return the result, then add these operations to the block
             new_op=op_instance.get(block.args[0], block.args[1])
-            reduce_result=scf.ReduceReturnOp.get(new_op.results[0])
+            reduce_result=None # Needs to be completed!
             block.add_ops([new_op, reduce_result])
 
             # Create the reduce operation and add to the top level block
-            reduce_op=scf.ReduceOp.get(other_arg, block)
+            reduce_op=None # Needs to be completed!
             ops_to_add.append(reduce_op)
 
         # Create a new top level block which will have far fewer arguments
@@ -85,8 +85,7 @@ class ApplyForToParallelRewriter(RewritePattern):
         new_block.add_op(new_yield)
 
         # Create our parallel operation and replace the for loop with this
-        parallel_loop=scf.ParallelOp.get([for_loop.lb], [for_loop.ub], [for_loop.step], [new_block], for_loop.iter_args)
-        rewriter.replace_matched_op(parallel_loop)
+        parallel_loop=None # Needs to be completed!
 
 
 @dataclass
