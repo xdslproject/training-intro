@@ -173,8 +173,7 @@ class ApplyForToParallelRewriter(RewritePattern):
         new_block.add_op(new_yield)
 
         # Create our parallel operation and replace the for loop with this
-        parallel_loop=None # Needs to be completed! 
-        #rewriter.replace_matched_op(parallel_loop)
+        parallel_loop=None # Needs to be completed!         
 ```
 
 If we look at line 55 of (src/for_to_parallel.py)[https://github.com/xdslproject/training-intro/blob/main/practical/src/for_to_parallel.py], which is `block_arg_types=[] # Needs to be completed!`, we need to provide the two types of the left and right hand sides as arguments to the block. These are _block_arg_op.typ_ and _other_arg.typ_ respectively, and each should be a member of the list (with a comma separating them).
@@ -187,3 +186,21 @@ Now we have done this we need to create the parallel loop operation itself, whic
 
 We are almost there, the last step is to instruct xDSL to replace the for loop with the new parallel loop. As the last line of this _match_and_rewrite_ method, just after you created the _parallel_ operation, you should add `rewriter.replace_matched_op(parallel_loop)`.
 
+>**Not sure or having problems?**
+> Please feel free to ask if there is anything you are unsure about, or you can check the [sample solution](https://github.com/xdslproject/training-intro/blob/main/practical/three/sample_solutions/for_to_parallel.py)
+
+### Looking at the rewrite pass in more detail
+
+A lot of the work being done here in the transformation is in extracting the arguments out of the top level block and removing them from the final _yield_. Effectively this transformation is manipulating the internal structure from the first IR to the second IR provided in the previous section, so have a look through the code and see if you can understand these it is making these modification, don't hesitate to ask one of the presenters about this if you are unsure about anything. For instance, _detach_ on an operation will remove it from its block (an operation can only be a member of one block), _erase_op_ will remove an operation from a block and _add_op_ adds an operation.
+
+There are some things worth highlighting in the IR and rewrite pass that we have skipped over so far. Firstly, we passed the parallel loop's lower and upper bounds along with the step in a list. This is because a _parallel_ operation can represent a nested loop and the below IR example illustrates a parallel loop operating over a nested loop, with _%4_ being the lower bounds of the top loop and _%5_ the lower bounds of the inner loop. The upper bounds and step values follow a similar logic. You can see that the block now has two index argument, representing the current iteration of both the inner and outer loops. MLIR will transform this as it feels most appropriate, for instance with the _openmp_ lowering it will likely apply the _collapse_ clause.
+
+```
+%7 = "scf.parallel"(%4, %5, %6, %7, %8, %9) ({
+  ^0(%10 : index, %11 : index):
+  ...
+  "scf.yield"() : () -> ()
+}) {"operand_segment_sizes" = array<i32: 2, 2, 2, 0>} : (index, index, index, index, index, index) -> ()
+```
+
+You can see in the above IR that we have _operand_segment_sizes_ provided as an argument to the operation. This is required for _varadic_ operands, which are operands which can have any size. Here the attribute is informing the operation that it is two lower bound operands, two upper bound operands, and two step operands but no SSA value arguments to be passed in.
