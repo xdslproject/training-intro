@@ -15,7 +15,7 @@ Sample solutions to this exercise are provided in [sample_solutions](sample_solu
 >**Having problems?**  
 > As you go through this exercise if there is anything you are unsure about or are stuck on then please do not hesitate to ask one of the tutorial demonstrators and we will be happy to assist!
 
-Remember, details about how to access your account on ARCHER2 and set up the environment that we will need for these practicals can be found on the [ARCHER2 setup instructions](https://github.com/xdslproject/training-intro/blob/main/practical/general/ARCHER2.md) page. If you are undertaking these tutorials locally then you can view the [local setup instructions](https://github.com/xdslproject/training-intro/blob/main/practical/general/local.md).
+Remember, details about how to access your account on ARCHER2 and set up the environment that we will need for these practicals can be found on the [ARCHER2 setup instructions](https://github.com/xdslproject/training-intro/blob/main/practical/general/ARCHER2.md) page. If you are undertaking these tutorials locally then you can view the [local setup instructions](https://github.com/xdslproject/training-intro/blob/main/practical/general/local.md) and if on a local machine ensure you have sourced the _environment.sh_ file from the _practical_ directory to set up your environment.
 
 Irrespective of the machine you are using, it is assumed that you have a command line terminal in the _training-intro/practical/two_ directory.
 
