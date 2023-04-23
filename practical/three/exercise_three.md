@@ -12,6 +12,8 @@ Learning objectives are:
 
 Sample solutions to this exercise are provided in [sample_solutions](sample_solutions) in-case you get stuck or just want to compare your efforts with ours.
 
+It is assumed that you have a command line terminal in the _training-intro/practical/three_ directory.
+
 >**Having problems?**  
 > As you go through this exercise if there is anything you are unsure about or are stuck on then please do not hesitate to ask one of the tutorial demonstrators and we will be happy to assist!
 
