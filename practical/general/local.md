@@ -80,3 +80,11 @@ All the material in the tutorials can be downloaded from GitHub via:
 ```bash
 user@local:~$ git clone https://github.com/xdslproject/training-intro.git
 ```
+
+You should then source the _environment.sh_ file in _training-intro/practical_ from that directory:
+
+```bash
+user@local:~$ cd training-intro/practical
+user@local:~$ source environment.sh
+
+```

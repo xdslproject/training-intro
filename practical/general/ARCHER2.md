@@ -35,7 +35,7 @@ This will set up all the required environment variables so that you can now exec
 
 ## Tutorial materials
 
-This GitHub repository has already been cloned into your _work_ directory on ARCHER2, so if you _ls_ you should see the _training-intro_ directory that you can cd into, for instance to go into the directory of the first practical:
+This GitHub repository has already been cloned into your _work_ directory on ARCHER2, so if you _ls_ you should see the _training-intro_ directory that you can cd into, for instance to go into the practical one directory:
 
 ```bash
 user@login01:~$ cd training-intro/practical/one
