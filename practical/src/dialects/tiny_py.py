@@ -139,11 +139,6 @@ class Loop(IRDLOperation):
     """
     name = "tiny_py.loop"
 
-    variable: OpAttr[StringAttr]
-    from_expr: Region
-    to_expr: Region
-    body: Region
-
     @staticmethod
     def get(variable: str | StringAttr,
             from_expr: Operation,
