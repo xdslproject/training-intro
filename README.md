@@ -20,7 +20,7 @@ Based upon a morning tutorial at SC
 | 10:00 - 10:30 | Morning break |
 | 10:30 - 10:35 | [Welcome back and overview of the second part](https://github.com/xdslproject/training-intro/raw/main/lectures/Second%20part.pdf) |
 | 10:35 - 11:45 | Hands on practical activity ([ex1](https://github.com/xdslproject/training-intro/tree/main/practical/one),[ex2](https://github.com/xdslproject/training-intro/tree/main/practical/two),[ex3](https://github.com/xdslproject/training-intro/tree/main/practical/three))|
-| 11:45 - 11:55 | Wash up of practical activities |
+| 11:45 - 11:55 | [Wash up of practical activities](https://github.com/xdslproject/training-intro/raw/main/lectures/Practical%20summary.pdf) |
 | 11:55 - 12:00 | Conclusions and next steps |
 
 ## Working on your own?
