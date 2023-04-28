@@ -314,7 +314,7 @@ user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard -t mlir -o ex_two.
 Then execute the following:
 
 ```bash
-user@login01:~$ mlir-opt --pass-pipeline="builtin.module(loop-invariant-code-motion, convert-scf-to-cf, convert-cf-to-llvm{index-bitwidth=64}, convert-arith-to-llvm{index-bitwidth=64}, convert-func-to-llvm)" ex_two.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
+user@login01:~$ mlir-opt --pass-pipeline="builtin.module(loop-invariant-code-motion, convert-scf-to-cf, convert-cf-to-llvm{index-bitwidth=64}, convert-arith-to-llvm{index-bitwidth=64}, convert-func-to-llvm, reconcile-unrealized-casts)" ex_two.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
 ```
 
 This is quite a bit more complex than the arguments to `mlir-opt` that were used in practical one, and that's because we have more dialects that we are lowering to the LLVM MLIR dialect. Furthermore, we are applying the _loop-invariant-code-motion_ optimisation pass which moves statements outside of the loop where possible and _reconcile-unrealized-casts_ which instructs MLIR to put in explicit operations for undertaking implicit data conversion. 
