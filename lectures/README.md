@@ -1,6 +1,7 @@
 ## Main lecture slides
 
-These link to a download of the PDF, you can also view the files via the GitHub viewer (but you will need to click to load more slides in the viewer as it loads them in batches)
+>**Note**
+> These links will open the GitHub PDF  viewer, this loads pages in batches so you will need to click _More Pages_ to load more slides in the viewer at the bottom
 
 * [An overview of MLIR and LLVM](https://github.com/xdslproject/training-intro/blob/main/lectures/Introduction%20to%20MLIR%20and%20LLVM.pdf): We explore MLIR and LLVM in general, describing the role of these technologies and the key concepts and terms.
 * [The xDSL framework](https://github.com/xdslproject/training-intro/blob/main/lectures/The%20xDSL%20framework.pdf): Introduces xDSL and describes how it can significantly improve programmer productivity when leveraging MLIR. 
