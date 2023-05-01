@@ -213,7 +213,7 @@ You can see in the above IR that we have _operand_segment_sizes_ provided as an 
 Now we have developed our pass, let's run it through `tinypy-opt` as per the following snippet. Note that here we are undertaking two transformations, first our previous _tiny-py-to-standard_ lowering and then the _for-to-parallel_ which because it comes second operates on the results of the first transformation.
 
 ```bash
-user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard,for-to-parallel -f mlir -t mlir
+user@login01:~$ tinypy-opt output.mlir -p tiny-py-to-standard,for-to-parallel
 ```
 
 The following is the IR outputted from these two transformations, you can see the _parallel_, _reduce_, and _reduce.return_ operations that we have added into our transformation in this section. The rest of the IR is the same as that generated in exercise two, and that is a major benefit of using _parallel_ because we can parallelise a loop without requiring extensive IR changes elsewhere.
@@ -255,7 +255,7 @@ The following is the IR outputted from these two transformations, you can see th
 We are now ready to feed this into `mlir-opt` and generate LLVM IR to pass to Clang to build out executable. Similarly to exercise one you should create a file with the _.mlir_ ending, via 
 
 ```bash
-user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard,for-to-parallel -f mlir -t mlir -o ex_three.mlir
+user@login01:~$ tinypy-opt output.mlir -p tiny-py-to-standard,for-to-parallel -o ex_three.mlir
 ```
 
 ### Threaded parallelism via OpenMP
