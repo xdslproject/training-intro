@@ -22,20 +22,20 @@ You first need to download and build LLVM, whilst this is fairly time consuming 
 
 ```bash
 user@local:~$ git clone https://github.com/llvm/llvm-project.git
+user@local:~$ cd llvm-project
 user@local:~$ git checkout --track origin/release/16.x
 ```
 
 We will now create the build directory and issue cmake to configure the LLVM build, using GNU make to undertake the actual build and building clang, mlir, and openmp.
 
 ```bash
-user@local:~$ cd llvm-project
 user@local:~$ mkdir build
 user@local:~$ cd build
 user@local:~$ cmake  -G "Unix Makefiles"   -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON   -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH"   -DFLANG_ENABLE_WERROR=ON   -DLLVM_ENABLE_ASSERTIONS=ON   -DLLVM_TARGETS_TO_BUILD=host   -DLLVM_LIT_ARGS=-v   -DLLVM_ENABLE_PROJECTS="clang;mlir;openmp"   -DLLVM_ENABLE_RUNTIMES="compiler-rt" ../llvm
 ```
 
 >**Note**
-> If you would rather use Ninja for the build you can substitute _"Unix Makefiles"_ with _Ninja_. To build additional LLVM components you can add these in the comma separated list of _LLVM_ENABLE_PROJECTS_ . You can explicitly specify the install directory via the _-DMAKE_INSTALL_PREFIX_ argument to cmake.
+> If you would rather use Ninja for the build you can substitute _"Unix Makefiles"_ with _Ninja_. To build additional LLVM components you can add these in the comma separated list of _LLVM_ENABLE_PROJECTS_ . You can explicitly specify the install directory via the _-DCMAKE_INSTALL_PREFIX_ argument to cmake.
 
 Once configuration has completed you can build LLVM by issuing:
 
