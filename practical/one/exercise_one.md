@@ -51,15 +51,15 @@ user@login01:~$ python3.10 ex_one.py
 Congratulations, you have run your first bit of xDSL/MLIR! This won't actually execute the code, but instead builds up an Intermediate Representation (IR) of the code that we wish to compile in that function. The output of this is as follows:
 
 ```
-builtin.module() {
-  tiny_py.module() {
-    tiny_py.function() ["fn_name" = "hello_world", "return_var" = !empty, "args" = []] {
-      tiny_py.call_expr() ["func" = "print", "type" = !empty, "builtin" = !bool<"True">] {
-        tiny_py.constant() ["value" = "Hello world!"]
-      }
-    }
-  }
-}
+"builtin.module"() ({
+  "tiny_py.module"() ({
+    "tiny_py.function"() ({
+      "tiny_py.call_expr"() ({
+        "tiny_py.constant"() {"value" = "Hello world!"} : () -> ()
+      }) {"func" = "print", "type" = !empty, "builtin" = #bool<"True">} : () -> ()
+    }) {"fn_name" = "hello_world", "return_var" = !empty, "args" = []} : () -> ()
+  }) : () -> ()
+}) : () -> ()
 ```
 
 Now let's take a look at what this means. Firstly, as we talked about in the initial presentation, all operations are prefixed with the dialect name that they belong to. Here you can see that we are using two dialects, the _builtin_ dialect for the _module_ operation and the _tinypy_ dialect for other operations. Hopefully from looking at this IR representation you can see how it corresponds to the origional Python code, where _tiny_py.function_ defines the _hello_world_ function and _tiny_py.call_expr_ represents the call into the _print_ function, which is using the attributed _builtin_ to represent whether it is a built in Python function or user defined. 
@@ -75,7 +75,7 @@ The _tiny_py_ dialect that we are using here is one that we have defined for thi
 LLVM and MLIR have adopted _-opt_ tools as a standard to be used to drive manipulation of IR, and xDSL also follows this naming convention. We have provided a corresponding tool for our tinypy compiler called _tinypy_opt_ , and this provides a convenient way in which to drive the parsing, printing, and manipulation from the command line. If you look in the current directory you will see a new file called _output.xdsl_, this is a text file that was created in the last step when we ran the _python3.10 ex_one.py_ command, and contains exactly the same output as was printed to the screen and we saw above. We will now operate on that file to lower it to the standard dialects, at the command line execute to following: 
 
 ```bash
-user@login01:~$ ./tinypy-opt output.xdsl -p tiny-py-to-standard -t mlir
+user@login01:~$ ./tinypy-opt output.xdsl -p tiny-py-to-standard -f mlir -t mlir
 ```
 
 You will see that the following output will be displayed to screen:
@@ -95,7 +95,7 @@ You will see that the following output will be displayed to screen:
 }) : () -> ()
 ```
 
-There are a few things going on here, so let's unpack it step by step. Firstly, we are providing the IR stored in the _output.xdsl_ file as an input to the _tinypy-opt_ tool. Using the _-p_ flag, we are instructing that the _tiny-py-to-standard_ pass should be run over this IR and transform it. Lastly, the _-t_ flag instructs the tool which technology to structure the output IR for, in this case we are selecting the MLIR format which can be fed directly into the MLIR tooling itself.
+There are a few things going on here, so let's unpack it step by step. Firstly, we are providing the IR stored in the _output.xdsl_ file as an input to the _tinypy-opt_ tool. Using the _-p_ flag, we are instructing that the _tiny-py-to-standard_ pass should be run over this IR and transform it. Lastly, the _-f_ and _-t_ flags instructs the tool which format the IR is in, in this case we are selecting the MLIR format which can be fed directly into the MLIR tooling itself.
 
 You can see that this IR looks quite different to the IR previously where it is in a much flatter form. This is known as Static Single-Assignment (SSA) form and is a common standard used across many compilers for structuring the IR. This goes back to the point we made in the lectures about progressive lowering, where we have taken something more structured (the _tiny_py_) and lowered it to a representation that is closer to the concrete implementation level. 
 
