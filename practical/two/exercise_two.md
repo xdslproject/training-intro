@@ -46,21 +46,21 @@ user@login01:~$ python3.10 ex_two.py
 The output will look like the following, and you can also find it in the newly created _output.xdsl_ file.
 
 ```
-builtin.module() {
-  tiny_py.module() {
-    tiny_py.function() ["fn_name" = "ex_two", "return_var" = !empty, "args" = []] {
-      tiny_py.assign() ["var_name" = "val"] {
-        tiny_py.constant() ["value" = 0.0 : !f32]
-      }
-      tiny_py.assign() ["var_name" = "add_val"] {
-        tiny_py.constant() ["value" = 88.2 : !f32]
-      }
-      tiny_py.call_expr() ["func" = "print", "type" = !empty, "builtin" = !bool<"True">] {
-        tiny_py.var() ["variable" = "val"]
-      }
-    }
-  }
-}
+"builtin.module"() ({
+  "tiny_py.module"() ({
+    "tiny_py.function"() ({
+      "tiny_py.assign"() ({
+        "tiny_py.constant"() {"value" = 0.0 : f32} : () -> ()
+      }) {"var_name" = "val"} : () -> ()
+      "tiny_py.assign"() ({
+        "tiny_py.constant"() {"value" = 88.2 : f32} : () -> ()
+      }) {"var_name" = "add_val"} : () -> ()
+      "tiny_py.call_expr"() ({
+        "tiny_py.var"() {"variable" = "val"} : () -> ()
+      }) {"func" = "print", "type" = !empty, "builtin" = #bool<"True">} : () -> ()
+    }) {"fn_name" = "ex_two", "return_var" = !empty, "args" = []} : () -> ()
+  }) : () -> ()
+}) : () -> ()
 ```
 
 As you can see, we have the variable declarations and print statement at the end, but the loop and everything within it is missing. Don't worry, this is intentional and because our compiler is currently unaware of loops. The main purpose of this exercise is to add in support for handling loops. 
@@ -137,34 +137,34 @@ user@login01:~$ python3.10 ex_two.py
 You should see the output below where, as you can see, the loop is now represented containing the _variable_ string as an attribute and the three regions (each of these are between the { } braces).
 
 ```
-builtin.module() {
-  tiny_py.module() {
-    tiny_py.function() ["fn_name" = "ex_two", "return_var" = !empty, "args" = []] {
-      tiny_py.assign() ["var_name" = "val"] {
-        tiny_py.constant() ["value" = 0.0 : !f32]
-      }
-      tiny_py.assign() ["var_name" = "add_val"] {
-        tiny_py.constant() ["value" = 88.2 : !f32]
-      }
-      tiny_py.loop() ["variable" = "a"] {
-        tiny_py.constant() ["value" = 0 : !i32]
-      } {
-        tiny_py.constant() ["value" = 100000 : !i32]
-      } {
-        tiny_py.assign() ["var_name" = "val"] {
-          tiny_py.binaryoperation() ["op" = "add"] {
-            tiny_py.var() ["variable" = "val"]
-          } {
-            tiny_py.var() ["variable" = "add_val"]
-          }
-        }
-      }
-      tiny_py.call_expr() ["func" = "print", "type" = !empty, "builtin" = !bool<"True">] {
-        tiny_py.var() ["variable" = "val"]
-      }
-    }
-  }
-}
+"builtin.module"() ({
+  "tiny_py.module"() ({
+    "tiny_py.function"() ({
+      "tiny_py.assign"() ({
+        "tiny_py.constant"() {"value" = 0.0 : f32} : () -> ()
+      }) {"var_name" = "val"} : () -> ()
+      "tiny_py.assign"() ({
+        "tiny_py.constant"() {"value" = 88.2 : f32} : () -> ()
+      }) {"var_name" = "add_val"} : () -> ()
+      "tiny_py.loop"() ({
+        "tiny_py.constant"() {"value" = 0 : i32} : () -> ()
+      }, {
+        "tiny_py.constant"() {"value" = 100000 : i32} : () -> ()
+      }, {
+        "tiny_py.assign"() ({
+          "tiny_py.binaryoperation"() ({
+            "tiny_py.var"() {"variable" = "val"} : () -> ()
+          }, {
+            "tiny_py.var"() {"variable" = "add_val"} : () -> ()
+          }) {"op" = "add"} : () -> ()
+        }) {"var_name" = "val"} : () -> ()
+      }) {"variable" = "a"} : () -> ()
+      "tiny_py.call_expr"() ({
+        "tiny_py.var"() {"variable" = "val"} : () -> ()
+      }) {"func" = "print", "type" = !empty, "builtin" = #bool<"True">} : () -> ()
+    }) {"fn_name" = "ex_two", "return_var" = !empty, "args" = []} : () -> ()
+  }) : () -> ()
+}) : () -> ()
 ```
 
 ## Lowering to the standard dialects
@@ -180,7 +180,7 @@ def translate_loop(ctx: SSAValueCtx,
                   loop_stmt: tiny_py.Loop) -> List[Operation]:    
 
     # First off lets translate the from (start) and to (end) expressions of the loop
-    start_expr, start_ssa=translate_expr(ctx, loop_stmt.from_expr.blocks[0].ops[0])
+    start_expr, start_ssa=translate_expr(ctx, loop_stmt.from_expr.blocks[0].ops.first)
     end_expr, end_ssa=None, None # Needs to be completed!
     # The scf.for operation requires indexes as the type, so we cast these to
     # the indextype using the IndexCastOp of the arith dialect
@@ -240,7 +240,7 @@ def translate_loop(ctx: SSAValueCtx,
     return start_expr+end_expr+[start_cast, end_cast, step_op, for_loop]
 ```
 
-There is quite a bit going on here, so let's first complete the missing parts and then we will explore what the other aspects are doing too. You can see at line 181 of this file the line `end_expr, end_ssa=None, None # Needs to be completed!`. This is for handling the upper loop bounds which is an expression, and we need to call the corresponding function to convert this from the tiny py dialect into the standard dialects. You can see from the line above how this is handled for start, or from, expression, and here we can do very similar for this end expression using `loop_stmt.to_expr.blocks[0].ops[0]` as the second argument to the `translate_expr` call. This `translate_expr` call returns two things, firstly the operations that the _to_ expression corresponds to, and secondly the resulting SSA value that can be used by subsequent operations to reference this.
+There is quite a bit going on here, so let's first complete the missing parts and then we will explore what the other aspects are doing too. You can see at line 181 of this file the line `end_expr, end_ssa=None, None # Needs to be completed!`. This is for handling the upper loop bounds which is an expression, and we need to call the corresponding function to convert this from the tiny py dialect into the standard dialects. You can see from the line above how this is handled for start, or from, expression, and here we can do very similar for this end expression using `loop_stmt.to_expr.blocks[0].ops.first` as the second argument to the `translate_expr` call. This `translate_expr` call returns two things, firstly the operations that the _to_ expression corresponds to, and secondly the resulting SSA value that can be used by subsequent operations to reference this.
 
 Based upon how we have expressed this, the _start_ssa_ and _end_ssa_ values are of type integer, and the _for_ operation of the _scf_ dialect requires the lower and upper loop bound operands to be of type _index_ . Therefore we need to issue an operation that converts from an _integer_ to and _index_. If you look at line 185 of the file (line 10 of the snippet above) you will see the line `end_cast = None # Needs to be completed!` . The line above issues this conversion for _start_ssa_, so by following what was done there you should issue the same conversion operation for _end_ssa_.
 
@@ -251,7 +251,7 @@ Now we have done all of this we just need to create the _for_ operation in the _
 We have completed the missing parts and are now ready to run the translation pass and output MLIR formatted IR:
 
 ```bash
-user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard -t mlir
+user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard -f mlir -t mlir
 ```
 
 You should see the following generated, where you can see the for loop from the scf dialect which contains the loop bounds and body.
@@ -308,7 +308,7 @@ The challenge is knowing which SSA values need to be included in the block as ar
 We are now ready to feed this into `mlir-opt` and generate LLVM IR to pass to Clang to build out executable. Similarly to exercise one you should create a file with the _.mlir_ ending, via 
 
 ```bash
-user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard -t mlir -o ex_two.mlir
+user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard -f mlir -t mlir -o ex_two.mlir
 ```
 
 Then execute the following:
