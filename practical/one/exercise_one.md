@@ -109,7 +109,7 @@ You can see right at the end of the IR we have another _func_ operation, this ti
 
 ## Generating the executable and running
 
-The IR that we are generating from our tool is now is ready to be fed into MLIR and compiled into an executable. To do this we will execute _./tinypy-opt output.xdsl -p tiny-py-to-standard -o ex_one.mlir_ . You can see that this command is identical to the previous one apart from the _-o_ argument, which informs the tool to store the generated IR in a file rather than output to screen. Next we execute:
+The IR that we are generating from our tool is now is ready to be fed into MLIR and compiled into an executable. To do this we will execute _./tinypy-opt output.mlir -p tiny-py-to-standard -o ex_one.mlir_ . You can see that this command is identical to the previous one apart from the _-o_ argument, which informs the tool to store the generated IR in a file rather than output to screen. Next we execute:
 
 ```bash
 user@login01:~$ mlir-opt --convert-func-to-llvm ex_one.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
