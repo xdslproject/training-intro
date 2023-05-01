@@ -72,10 +72,10 @@ The _tiny_py_ dialect that we are using here is one that we have defined for thi
 
 ## The opt driver tool
 
-LLVM and MLIR have adopted _-opt_ tools as a standard to be used to drive manipulation of IR, and xDSL also follows this naming convention. We have provided a corresponding tool for our tinypy compiler called _tinypy_opt_ , and this provides a convenient way in which to drive the parsing, printing, and manipulation from the command line. If you look in the current directory you will see a new file called _output.xdsl_, this is a text file that was created in the last step when we ran the _python3.10 ex_one.py_ command, and contains exactly the same output as was printed to the screen and we saw above. We will now operate on that file to lower it to the standard dialects, at the command line execute to following: 
+LLVM and MLIR have adopted _-opt_ tools as a standard to be used to drive manipulation of IR, and xDSL also follows this naming convention. We have provided a corresponding tool for our tinypy compiler called _tinypy_opt_ , and this provides a convenient way in which to drive the parsing, printing, and manipulation from the command line. If you look in the current directory you will see a new file called _output.mlir_, this is a text file that was created in the last step when we ran the _python3.10 ex_one.py_ command, and contains exactly the same output as was printed to the screen and we saw above. We will now operate on that file to lower it to the standard dialects, at the command line execute to following: 
 
 ```bash
-user@login01:~$ ./tinypy-opt output.xdsl -p tiny-py-to-standard -f mlir -t mlir
+user@login01:~$ ./tinypy-opt output.mlir -p tiny-py-to-standard
 ```
 
 You will see that the following output will be displayed to screen:
@@ -95,7 +95,7 @@ You will see that the following output will be displayed to screen:
 }) : () -> ()
 ```
 
-There are a few things going on here, so let's unpack it step by step. Firstly, we are providing the IR stored in the _output.xdsl_ file as an input to the _tinypy-opt_ tool. Using the _-p_ flag, we are instructing that the _tiny-py-to-standard_ pass should be run over this IR and transform it. Lastly, the _-f_ and _-t_ flags instructs the tool which format the IR is in, in this case we are selecting the MLIR format which can be fed directly into the MLIR tooling itself.
+There are a couple of things going on here, so let's unpack it step by step. Firstly, we are providing the IR stored in the _output.mlir_ file as an input to the _tinypy-opt_ tool. Then, using the _-p_ flag, we are instructing that the _tiny-py-to-standard_ pass should be run over this IR and transform it. 
 
 You can see that this IR looks quite different to the IR previously where it is in a much flatter form. This is known as Static Single-Assignment (SSA) form and is a common standard used across many compilers for structuring the IR. This goes back to the point we made in the lectures about progressive lowering, where we have taken something more structured (the _tiny_py_) and lowered it to a representation that is closer to the concrete implementation level. 
 
@@ -109,7 +109,7 @@ You can see right at the end of the IR we have another _func_ operation, this ti
 
 ## Generating the executable and running
 
-The IR that we are generating from our tool is now is ready to be fed into MLIR and compiled into an executable. To do this we will execute _./tinypy-opt output.xdsl -p tiny-py-to-standard -f mlir -t mlir -o ex_one-mlir_ . You can see that this command is identical to the previous one apart from the _-o_ argument, which informs the tool to store the generated IR in a file rather than output to screen. Next we execute:
+The IR that we are generating from our tool is now is ready to be fed into MLIR and compiled into an executable. To do this we will execute _./tinypy-opt output.xdsl -p tiny-py-to-standard -o ex_one.mlir_ . You can see that this command is identical to the previous one apart from the _-o_ argument, which informs the tool to store the generated IR in a file rather than output to screen. Next we execute:
 
 ```bash
 user@login01:~$ mlir-opt --convert-func-to-llvm ex_one.mlir | mlir-translate -mlir-to-llvmir | clang -x ir -o test -
