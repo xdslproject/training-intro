@@ -31,7 +31,7 @@ def python_compile(func):
         printer.print_op(tiny_py_ir)
         print("") # Adds a new line
 
-        f = open("output.xdsl", "w")
+        f = open("output.mlir", "w")
         printer_file = Printer(stream=f, target=Printer.Target.MLIR)
         printer_file.print_op(tiny_py_ir)
         f.write("") # Terminates file on new line
