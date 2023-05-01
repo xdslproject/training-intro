@@ -440,5 +440,3 @@ class LowerTinyPyToStandard(ModulePass):
   def apply(self, ctx: MLContext, input_module: ModuleOp):
       res_module = translate_program(input_module)
       res_module.regions[0].move_blocks(input_module.regions[0])
-      # Create program entry point
-      #check_program_entry_point(input_module)
