@@ -43,7 +43,7 @@ Firstly, let's generate the tiny py IR:
 user@login01:~$ python3.10 ex_two.py
 ```
 
-The output will look like the following, and you can also find it in the newly created _output.xdsl_ file.
+The output will look like the following, and you can also find it in the newly created _output.mlir_ file.
 
 ```
 "builtin.module"() ({
@@ -251,7 +251,7 @@ Now we have done all of this we just need to create the _for_ operation in the _
 We have completed the missing parts and are now ready to run the translation pass and output MLIR formatted IR:
 
 ```bash
-user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard -f mlir -t mlir
+user@login01:~$ tinypy-opt output.mlir -p tiny-py-to-standard
 ```
 
 You should see the following generated, where you can see the for loop from the scf dialect which contains the loop bounds and body.
@@ -308,7 +308,7 @@ The challenge is knowing which SSA values need to be included in the block as ar
 We are now ready to feed this into `mlir-opt` and generate LLVM IR to pass to Clang to build out executable. Similarly to exercise one you should create a file with the _.mlir_ ending, via 
 
 ```bash
-user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard -f mlir -t mlir -o ex_two.mlir
+user@login01:~$ tinypy-opt output.mlir -p tiny-py-to-standard -o ex_two.mlir
 ```
 
 Then execute the following:
