@@ -24,7 +24,7 @@ class ApplyForToParallelRewriter(RewritePattern):
         for_loop.body.detach_block(0)
         # Now get the arguments to the yield at the end of the for loop and the arguments
         # to the loop block too
-        yielded_args=list(loop_body.ops[-1].arguments)
+        yielded_args=list(loop_body.ops.last.arguments)
         block_args=list(loop_body.args)
 
         ops_to_add=[]
@@ -81,7 +81,7 @@ class ApplyForToParallelRewriter(RewritePattern):
         # We have a yield at the end of the block which yields non reduction
         # arguments
         new_yield=scf.Yield.get(*yielded_args)
-        new_block.erase_op(new_block.ops[-1])
+        new_block.erase_op(new_block.ops.last)
         new_block.add_op(new_yield)
 
         # Create our parallel operation and replace the for loop with this
