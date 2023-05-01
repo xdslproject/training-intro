@@ -113,7 +113,7 @@ class ApplyForToParallelRewriter(RewritePattern):
         for_loop.body.detach_block(0)
         # Now get the arguments to the yield at the end of the for loop and the arguments
         # to the loop block too
-        yielded_args=list(loop_body.ops[-1].arguments)
+        yielded_args=list(loop_body.ops.last.arguments)
         block_args=list(loop_body.args)
 
         ops_to_add=[]
@@ -170,7 +170,7 @@ class ApplyForToParallelRewriter(RewritePattern):
         # We have a yield at the end of the block which yields non reduction
         # arguments
         new_yield=scf.Yield.get(*yielded_args)
-        new_block.erase_op(new_block.ops[-1])
+        new_block.erase_op(new_block.ops.last)
         new_block.add_op(new_yield)
 
         # Create our parallel operation and replace the for loop with this
@@ -213,7 +213,7 @@ You can see in the above IR that we have _operand_segment_sizes_ provided as an 
 Now we have developed our pass, let's run it through `tinypy-opt` as per the following snippet. Note that here we are undertaking two transformations, first our previous _tiny-py-to-standard_ lowering and then the _for-to-parallel_ which because it comes second operates on the results of the first transformation.
 
 ```bash
-user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard,for-to-parallel -t mlir
+user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard,for-to-parallel -f mlir -t mlir
 ```
 
 The following is the IR outputted from these two transformations, you can see the _parallel_, _reduce_, and _reduce.return_ operations that we have added into our transformation in this section. The rest of the IR is the same as that generated in exercise two, and that is a major benefit of using _parallel_ because we can parallelise a loop without requiring extensive IR changes elsewhere.
@@ -255,7 +255,7 @@ The following is the IR outputted from these two transformations, you can see th
 We are now ready to feed this into `mlir-opt` and generate LLVM IR to pass to Clang to build out executable. Similarly to exercise one you should create a file with the _.mlir_ ending, via 
 
 ```bash
-user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard,for-to-parallel -t mlir -o ex_three.mlir
+user@login01:~$ tinypy-opt output.xdsl -p tiny-py-to-standard,for-to-parallel -f mlir -t mlir -o ex_three.mlir
 ```
 
 ### Threaded parallelism via OpenMP
