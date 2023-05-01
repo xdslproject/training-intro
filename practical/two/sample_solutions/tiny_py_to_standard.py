@@ -74,7 +74,7 @@ def translate_program(input_module: Module) -> ModuleOp:
       for module in top_level_entry.children.blocks[0].ops:
         translate_toplevel(global_ctx, module, block)
 
-    assert (len(block.ops)) == 1 and isinstance(block.ops[0], func.FuncOp)
+    assert (len(block.ops)) == 1 and isinstance(block.ops.first, func.FuncOp)
 
     block.add_ops(global_declarations)
     body.add_block(block)
@@ -177,8 +177,8 @@ def translate_loop(ctx: SSAValueCtx,
     """
 
     # First off lets translate the from (start) and to (end) expressions of the loop
-    start_expr, start_ssa=translate_expr(ctx, loop_stmt.from_expr.blocks[0].ops[0])
-    end_expr, end_ssa=translate_expr(ctx, loop_stmt.to_expr.blocks[0].ops[0])
+    start_expr, start_ssa=translate_expr(ctx, loop_stmt.from_expr.blocks[0].ops.first)
+    end_expr, end_ssa=translate_expr(ctx, loop_stmt.to_expr.blocks[0].ops.first)
     # The scf.for operation requires indexes as the type, so we cast these to
     # the indextype using the IndexCastOp of the arith dialect
     start_cast = arith.IndexCastOp.get(start_ssa, IndexType())
@@ -263,7 +263,7 @@ def translate_assign(ctx: SSAValueCtx,
     var_name = assign.var_name
     assert isinstance(var_name, StringAttr)
 
-    expr, ssa=translate_expr(ctx, assign.value.blocks[0].ops[0])
+    expr, ssa=translate_expr(ctx, assign.value.blocks[0].ops.first)
 
     # Always update the SSA context as it is this new SSA element that subsequent references
     # to the variable should reference
@@ -417,8 +417,8 @@ def translate_binary_expr(ctx: SSAValueCtx,
     """
     Translates a binary expression
     """
-    lhs, lhs_ssa=translate_expr(ctx, op.lhs.blocks[0].ops[0])
-    rhs, rhs_ssa=translate_expr(ctx, op.rhs.blocks[0].ops[0])
+    lhs, lhs_ssa=translate_expr(ctx, op.lhs.blocks[0].ops.first)
+    rhs, rhs_ssa=translate_expr(ctx, op.rhs.blocks[0].ops.first)
     operand_type = lhs_ssa.typ
     if op.op.data in binary_arith_op_matching:
         # We match here on the LHS type, for a more advanced coverage if the types are different
