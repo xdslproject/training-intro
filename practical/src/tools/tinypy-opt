@@ -19,10 +19,6 @@ class PsyOptMain(xDSLOptMain):
       self.register_pass(LowerTinyPyToStandard)
       self.register_pass(ConvertForToParallel)
 
-
-    def _output_fortran(prog: ModuleOp, output: IOBase):
-        print_fortran(prog.ops, stream=output)
-
     def register_all_targets(self):
         super().register_all_targets()
 
