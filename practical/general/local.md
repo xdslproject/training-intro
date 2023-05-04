@@ -49,6 +49,9 @@ For more details about building LLVM or troubleshooting you can visit the [LLVM 
 
 ## Installing xDSL
 
+>**Note**
+> This tutorial is currently tested with version 0.12.1 of xDSL, so that is the version we will obtain here. 
+
 You have two options to install xDSL, you can either get the latest release via pip or download the source from GitHub. The benefit of using pip is that it will install the requiresite Python packages too, whereas when you execute from source you must get these manually (via pip). 
 
 ### Installing via pip
@@ -56,15 +59,17 @@ You have two options to install xDSL, you can either get the latest release via 
 You can install xDSL from pip by executing the following:
 
 ```bash
-user@local:~$ pip install xdsl
+user@local:~$ pip install xdsl==0.12.1
 ```
 
 ### Installing and running from source
 
-To install and run from source you will need to clone the xDSL GitHub repository:
+To install and run from source you will need to clone the xDSL GitHub repository and switch to the version 0.12.1 tag:
 
 ```bash
 user@local:~$ git clone https://github.com/xdslproject/xdsl.git
+user@local:~$ cd xdsl
+user@local:~$ git checkout tags/v0.12.1
 ```
 
 You will then need to append the top level to your _PYTHONPATH_, for instance, assuming you have cloned xDSL into your home directory:
