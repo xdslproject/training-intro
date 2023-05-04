@@ -20,7 +20,7 @@ Once you have connected you should then change into your _work_ directory becaus
 user@login01:~$ cd /work/d011/d011/$USER
 ```
 
-We have preprepared a series of modules which will provide us with LLVM 16, xDSL, and the correct Python version. You should therefore issue:
+We have preprepared a series of modules which will provide us with LLVM 16, xDSL version 0.12.1, and the correct Python version. You should therefore issue:
 
 ```bash
 user@login01:~$ module use /work/d011/shared/modules
