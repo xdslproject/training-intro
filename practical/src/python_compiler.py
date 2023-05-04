@@ -27,12 +27,12 @@ def python_compile(func):
         tiny_py_ir=ModuleOp([tiny_py_ir])
 
         # Now we use the xDSL printer to output our built IR to stdio
-        printer = Printer(stream=sys.stdout, target=Printer.Target.MLIR)
+        printer = Printer(stream=sys.stdout)
         printer.print_op(tiny_py_ir)
         print("") # Gives us a new line
 
         f = open("output.mlir", "w")
-        printer_file = Printer(stream=f, target=Printer.Target.MLIR)
+        printer_file = Printer(stream=f)
         printer_file.print_op(tiny_py_ir)
         f.write("") # Terminates file on new line
         f.close()
