@@ -334,3 +334,7 @@ user@login01:~$ sbatch sub_ex1.srun
 ```
 
 You can check on the status of your job in the queue via _squeue -u $USER_ and once this has completed an output file will appear in your directly that contains the stdio output of the job. You can cat or less this file, which ever you prefer.
+
+## Well done!
+
+Well done - by extending your compiler to support loops this means you are now executing computation on the supercomputer, and furthermore accelerating the Python code with your compiler. In the [next exercise](https://github.com/xdslproject/training-intro/edit/main/practical/three) we are going to further enhance our compiler to undertake automatic parallelisation of the loop to run over all 128 cores per node of ARCHER2.
